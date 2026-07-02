@@ -103,8 +103,9 @@ python3 -m http.server 5178
 
 - **来店QR**: URLに `?unlock=<cardId>` を付けて開いた時に該当カードを解放、など
   （解放は `app.js` の `unlockedSet` / `saveUnlocked()` を利用）
-- **1日1回ガチャ**: `localStorage["and-card:lastGacha"]` に日付を保存済み。
-  当日分を引いたら `drawGacha()` の先頭で弾く実装を足すだけ
+- **1日1回ガチャ**: `localStorage["and-card:dailyDate"]` に日本時間（Asia/Tokyo）の
+  日付を保存し、**毎日0時（JST）にリセット**。Supabase版の判定基準（`functions.sql` の
+  `now() at time zone 'Asia/Tokyo'`）と揃えています
 - **Instagram導線**: モーダルに共有ボタンを追加し、カード情報からシェアURLを生成
 
 ## 所持状態について

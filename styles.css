@@ -252,6 +252,18 @@ body {
   gap: 8px;
   margin-bottom: 10px;
 }
+.gacha-status .gs-reset {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 0.72rem;
+  color: var(--ink);
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 5px 10px;
+  margin-bottom: 10px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
 .gacha-status .gs-pill {
   font-family: var(--font-mono);
   font-weight: 800;

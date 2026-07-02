@@ -97,16 +97,39 @@
     }
   }
 
-  // ローカル日付 YYYY-MM-DD（タイムゾーンずれ防止）
+  // 日本時間（Asia/Tokyo）の日付 YYYY-MM-DD。
+  // デイリーは「日本時間の毎日0時」にリセット＝Supabase側の判定基準と同じ。
   function todayStr() {
-    const d = new Date();
-    return (
-      d.getFullYear() +
-      "-" +
-      String(d.getMonth() + 1).padStart(2, "0") +
-      "-" +
-      String(d.getDate()).padStart(2, "0")
-    );
+    try {
+      // en-CA ロケールは YYYY-MM-DD 形式を返す
+      return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo" }).format(new Date());
+    } catch (e) {
+      // Intl非対応環境では端末ローカル日付にフォールバック
+      const d = new Date();
+      return (
+        d.getFullYear() +
+        "-" +
+        String(d.getMonth() + 1).padStart(2, "0") +
+        "-" +
+        String(d.getDate()).padStart(2, "0")
+      );
+    }
+  }
+  // 次の日本時間0時（＝デイリーリセット）までのミリ秒。JSTはUTC+9固定・夏時間なし
+  function msUntilDailyReset() {
+    const now = Date.now();
+    const jst = new Date(now + 9 * 3600 * 1000);
+    const nextMidnightJst =
+      Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), jst.getUTCDate() + 1) -
+      9 * 3600 * 1000;
+    return nextMidnightJst - now;
+  }
+  function resetCountdownText() {
+    const ms = Math.max(0, msUntilDailyReset());
+    const totalMin = Math.ceil(ms / 60000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return h > 0 ? "あと" + h + "時間" + m + "分" : "あと" + m + "分";
   }
   function hasDailyToday() {
     return dailyDate !== todayStr();
@@ -598,7 +621,7 @@
   function drawGacha() {
     // 引ける回数チェック（デイリー + ボーナス）
     if (pullsAvailable() <= 0) {
-      showToast("今日のガチャは引き切りました。また明日！🌙");
+      showToast("今日のガチャは引き切りました。毎日0時にリセット！🌙");
       renderGachaStatus();
       return;
     }
@@ -683,6 +706,7 @@
   /* ====================================================================
    * ガチャ状態パネル（引ける回数・被りメーター）
    * ================================================================== */
+  let gachaStatusTimer = null;
   function renderGachaStatus() {
     if (!els.gachaStatus) return;
     const avail = pullsAvailable();
@@ -694,7 +718,7 @@
     if (btnLabel) {
       btnLabel.textContent =
         avail <= 0
-          ? "また明日引ける"
+          ? "0時にまた引ける"
           : dailyLeft
           ? "今日の1枚を引く"
           : "ボーナスガチャを引く（残り" + bonusPulls + "）";
@@ -704,6 +728,12 @@
     const seasonHtml = summerSecretsActive()
       ? '<div class="gs-season">🌴 夏限定シークレット出現中（7・8月／SRと同確率）</div>'
       : "";
+    // デイリー消費済みなら、次のリセット（日本時間0時）までの残り時間を表示
+    const resetHtml = dailyLeft
+      ? ""
+      : '<div class="gs-reset">⏰ 次のデイリーまで ' +
+        resetCountdownText() +
+        "（毎日0時リセット）</div>";
     els.gachaStatus.innerHTML =
       seasonHtml +
       '<div class="gs-row">' +
@@ -715,11 +745,19 @@
       "回</span>" +
       '<span class="gs-pill big">引ける回数 ' + avail + "</span>" +
       "</div>" +
+      resetHtml +
       '<div class="gs-dupe">' +
       '<div class="gs-dupe-label">被り貯金 <b>' + dupeStock + " / " + DUPE_BONUS_THRESHOLD +
       "</b>（5枚で無料ガチャ）</div>" +
       '<div class="gs-bar"><span style="width:' + pct + '%"></span></div>' +
       "</div>";
+
+    // デイリー消費中はカウントダウンを毎分更新。0時をまたぐと自動で「1回」に戻る
+    if (gachaStatusTimer) window.clearTimeout(gachaStatusTimer);
+    if (!dailyLeft) {
+      const wait = Math.min(60000, Math.max(1000, msUntilDailyReset() + 500));
+      gachaStatusTimer = window.setTimeout(renderGachaStatus, wait);
+    }
   }
 
   /* ====================================================================
