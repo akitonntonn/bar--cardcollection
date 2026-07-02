@@ -149,9 +149,9 @@
     const locked = !owned;
     const isSecret = card.rarity === "SECRET";
 
-    // 名前（SECRETは伏せ字風、未所持はさらに隠す）
+    // 名前（未所持SECRETだけ伏せ字。所持したら堂々と表示）
     let nameHtml;
-    if (isSecret) {
+    if (isSecret && !owned) {
       nameHtml = maskSecretName(card.name);
     } else {
       nameHtml = esc(card.name);
@@ -213,7 +213,7 @@
       (card.skillName
         ? '<div class="card__skill">' +
           '<span class="card__skill-name">' +
-          (isSecret ? '<span class="redacted">' + esc(card.skillName) + "</span>" : esc(card.skillName)) +
+          (isSecret && !owned ? '<span class="redacted">' + esc(card.skillName) + "</span>" : esc(card.skillName)) +
           "</span>" +
           (card.skillDescription ? '<p class="card__skill-desc">' + esc(card.skillDescription) + "</p>" : "") +
           "</div>"
@@ -390,7 +390,7 @@
     // 未所持SECRETは情報を伏せる
     const revealSecret = owned || !isSecret;
 
-    const nameForTitle = isSecret ? "シークレットカード" : card.name;
+    const nameForTitle = isSecret && !owned ? "シークレットカード" : card.name;
 
     const n = cardCount(card);
     const statusHtml = owned
@@ -526,20 +526,73 @@
   /* ====================================================================
    * ガチャ（デイリー1回 + 被り救済 / 体験版）
    * ================================================================== */
-  // ガチャ対象レアリティ（在庫があるものだけ）を、設定%で重み付き抽選。
-  // 在庫の無いレア（例: R 0枚）の%は、在庫のあるレアへ自動で再配分される。
-  function weightedGachaRarity() {
-    const pool = Object.keys(GACHA_RATES).filter((r) =>
-      baseCards.some((c) => c.rarity === r)
-    );
-    const total = pool.reduce((sum, r) => sum + GACHA_RATES[r], 0);
-    if (!pool.length || total <= 0) return null;
-    let roll = Math.random() * total;
-    for (const r of pool) {
-      roll -= GACHA_RATES[r];
-      if (roll <= 0) return r;
+  // 現在の月（1-12）
+  function currentMonth() {
+    return new Date().getMonth() + 1;
+  }
+
+  // このカードが「今」通常ガチャの排出対象か？
+  //  - card.gacha === true         : レアリティに関わらず対象（夏限定シークレット等）
+  //  - card.gacha 未指定           : rarity が GACHA_RATES にあれば対象（NORMAL/RARE/SR）
+  //                                  → SSR/SECRET は既定では対象外
+  //  - card.months があるとき       : 現在の月がその配列に含まれる時だけ対象（期間限定）
+  function isGachaCard(card) {
+    const eligible =
+      card.gacha === true ||
+      (card.gacha == null && Object.prototype.hasOwnProperty.call(GACHA_RATES, card.rarity));
+    if (!eligible) return false;
+    if (Array.isArray(card.months) && card.months.length) {
+      return card.months.indexOf(currentMonth()) !== -1;
     }
-    return pool[pool.length - 1];
+    return true;
+  }
+
+  // 排出枠（gachaBucket 優先。無ければ rarity）。夏限定シークレットは "SR" 枠を共有する。
+  function gachaBucketOf(card) {
+    return card.gachaBucket || card.rarity;
+  }
+
+  // 今このタイミングで引ける対象カード一覧
+  function activeGachaCards() {
+    return baseCards.filter(isGachaCard);
+  }
+
+  // 対象カードを枠(NORMAL/RARE/SR)ごとに束ね、設定%で重み付き抽選 → その枠から1枚。
+  // 在庫の無い枠（例: R 0枚）の%は、在庫のある枠へ自動で再配分される。
+  function pickGachaCard() {
+    const pool = activeGachaCards();
+    if (!pool.length) return null;
+
+    const buckets = {};
+    pool.forEach((c) => {
+      const b = gachaBucketOf(c);
+      (buckets[b] = buckets[b] || []).push(c);
+    });
+
+    const keys = Object.keys(buckets).filter((b) =>
+      Object.prototype.hasOwnProperty.call(GACHA_RATES, b)
+    );
+    const total = keys.reduce((sum, b) => sum + GACHA_RATES[b], 0);
+    if (!keys.length || total <= 0) return null;
+
+    let roll = Math.random() * total;
+    let chosen = keys[keys.length - 1];
+    for (const b of keys) {
+      roll -= GACHA_RATES[b];
+      if (roll <= 0) {
+        chosen = b;
+        break;
+      }
+    }
+    const group = buckets[chosen];
+    return group[Math.floor(Math.random() * group.length)];
+  }
+
+  // 夏限定シークレットが今出現しているか（ステータス表示用）
+  function summerSecretsActive() {
+    return baseCards.some(
+      (c) => c.rarity === "SECRET" && c.gacha === true && isGachaCard(c)
+    );
   }
 
   function drawGacha() {
@@ -550,13 +603,11 @@
       return;
     }
 
-    const rarity = weightedGachaRarity();
-    if (!rarity) {
+    const card = pickGachaCard();
+    if (!card) {
       showToast("ガチャ対象のカードがありません。");
       return;
     }
-    const candidates = baseCards.filter((c) => c.rarity === rarity);
-    const card = candidates[Math.floor(Math.random() * candidates.length)];
     const wasNew = !isOwned(card);
 
     // 回数を消費（デイリー優先→ボーナス）
@@ -650,7 +701,11 @@
     }
 
     const pct = Math.round((dupeStock / DUPE_BONUS_THRESHOLD) * 100);
+    const seasonHtml = summerSecretsActive()
+      ? '<div class="gs-season">🌴 夏限定シークレット出現中（7・8月／SRと同確率）</div>'
+      : "";
     els.gachaStatus.innerHTML =
+      seasonHtml +
       '<div class="gs-row">' +
       '<span class="gs-pill' + (dailyLeft ? " on" : "") + '">デイリー ' +
       (dailyLeft ? "1回" : "済") +

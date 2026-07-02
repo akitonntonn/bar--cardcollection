@@ -234,6 +234,18 @@ body {
 .gacha-status {
   margin-top: 14px;
 }
+.gacha-status .gs-season {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 0.74rem;
+  color: var(--ink);
+  background: linear-gradient(90deg, var(--lime), var(--cyan));
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
 .gacha-status .gs-row {
   display: flex;
   flex-wrap: wrap;
@@ -629,6 +641,8 @@ body {
 .card--SECRET .card__badge--rarity { color: var(--lime); }
 /* 未所持のフルアートは暗転（LOCKEDオーバーレイは上に残す） */
 .card.is-locked .card__cover { filter: grayscale(0.9) brightness(0.42); }
+/* 未所持SECRETのフルアートは強めに隠して「秘密」を保つ */
+.card.is-locked.card--SECRET .card__cover { filter: grayscale(1) brightness(0.28) blur(3px); }
 
 /* 下部：スキル */
 .card__skill {

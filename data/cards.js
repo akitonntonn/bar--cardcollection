@@ -14,8 +14,14 @@
  *
  * ▼ レアリティ： NORMAL / RARE / SR / SSR / SECRET
  *   ガチャ排出は NORMAL(78%) / RARE(17%) / SR(5%)。
- *   SSR=来店記念（誕生日・周年など）/ SECRET=特殊条件。どちらもガチャ対象外。
+ *   SSR=来店記念（誕生日・周年など）。基本はガチャ対象外。
+ *   SECRET=特殊条件。基本はガチャ対象外だが、下記フラグで期間限定排出も可能。
  *   variant … カードのテーマ名（同名キャラの見分け用ラベル）
+ *
+ * ▼ ガチャ排出の上書き（任意フィールド。夏限定シークレットなどで使用）
+ *   gacha: true        … レアリティに関わらず通常ガチャの対象にする
+ *   gachaBucket: "SR"  … 排出枠を指定（"SR"ならSRと同じ5%枠を共有＝SRと同確率帯）
+ *   months: [7, 8]     … この月（1-12）だけ排出（期間外は未所持ならLOCKEDのまま）
  * ========================================================================= */
 
 window.AND_CARDS = [
@@ -33,7 +39,7 @@ window.AND_CARDS = [
   { id: "akito-r02", no: "011", name: "あきと", variant: "鎖のハンター", rarity: "RARE", art: "full", imageUrl: "./assets/cards/akito-r02.png", obtainCondition: "通常ガチャ（低確率）で入手", owned: false },
   { id: "akito-sr01", no: "012", name: "あきと", variant: "忍・チャクラ", rarity: "SR", art: "full", imageUrl: "./assets/cards/akito-sr01.png", obtainCondition: "イベント・特別ガチャで入手", owned: true },
   { id: "akito-sr02", no: "013", name: "あきと", variant: "夜のAKITO BAR", rarity: "SR", art: "full", imageUrl: "./assets/cards/akito-sr02.png", obtainCondition: "イベント・特別ガチャで入手", owned: false },
-  { id: "akito-ssr01", no: "014", name: "あきと", variant: "誕生日シャンパン", rarity: "SSR", art: "full", imageUrl: "./assets/cards/akito-ssr01.png", obtainCondition: "来店記念（誕生日・周年）で入手", owned: false },
+  { id: "akito-ssr01", no: "014", name: "あきと", variant: "誕生日シャンパン", rarity: "SSR", art: "full", imageUrl: "./assets/cards/akito-ssr01.png", obtainCondition: "誕生日の来店記念で入手（9月・オリシャンを注文）", owned: false },
 
   /* ============================ かける ============================ */
   { id: "kakeru-n01", no: "015", name: "かける", variant: "居酒屋サムズアップ", rarity: "NORMAL", art: "full", imageUrl: "./assets/cards/kakeru-n01.png", obtainCondition: "通常ガチャで入手", owned: true },
@@ -49,7 +55,7 @@ window.AND_CARDS = [
   { id: "kakeru-r02", no: "025", name: "かける", variant: "クールドリブル", rarity: "RARE", art: "full", imageUrl: "./assets/cards/kakeru-r02.png", obtainCondition: "通常ガチャ（低確率）で入手", owned: true },
   { id: "kakeru-sr01", no: "026", name: "かける", variant: "海賊BAR", rarity: "SR", art: "full", imageUrl: "./assets/cards/kakeru-sr01.png", obtainCondition: "イベント・特別ガチャで入手", owned: false },
   { id: "kakeru-sr02", no: "027", name: "かける", variant: "いたずら忍者", rarity: "SR", art: "full", imageUrl: "./assets/cards/kakeru-sr02.png", obtainCondition: "イベント・特別ガチャで入手", owned: true },
-  { id: "kakeru-ssr01", no: "028", name: "かける", variant: "誕生日シャンパン", rarity: "SSR", art: "full", imageUrl: "./assets/cards/kakeru-ssr01.png", obtainCondition: "誕生日の来店記念で入手（7/8）", owned: false },
+  { id: "kakeru-ssr01", no: "028", name: "かける", variant: "誕生日シャンパン", rarity: "SSR", art: "full", imageUrl: "./assets/cards/kakeru-ssr01.png", obtainCondition: "誕生日の来店記念で入手（7/8・オリシャンを注文）", owned: false },
 
   /* ============================ しょうま ============================ */
   { id: "shoma-n01", no: "029", name: "しょうま", variant: "かていモンスター", rarity: "NORMAL", art: "full", imageUrl: "./assets/cards/shoma-n01.png", obtainCondition: "通常ガチャで入手", owned: true },
@@ -65,34 +71,16 @@ window.AND_CARDS = [
   { id: "shoma-sr01", no: "039", name: "しょうま", variant: "Good Vibes Only", rarity: "SR", art: "full", imageUrl: "./assets/cards/shoma-sr01.png", obtainCondition: "イベント・特別ガチャで入手", owned: true },
   { id: "shoma-sr02", no: "040", name: "しょうま", variant: "ナイトライフ", rarity: "SR", art: "full", imageUrl: "./assets/cards/shoma-sr02.png", obtainCondition: "イベント・特別ガチャで入手", owned: true },
   { id: "shoma-sr03", no: "041", name: "しょうま", variant: "カリスマオーラ", rarity: "SR", art: "full", imageUrl: "./assets/cards/shoma-sr03.png", obtainCondition: "イベント・特別ガチャで入手", owned: false },
-  { id: "shoma-ssr01", no: "042", name: "しょうま", variant: "誕生日シャンパン", rarity: "SSR", art: "full", imageUrl: "./assets/cards/shoma-ssr01.png", obtainCondition: "来店記念（誕生日・周年）で入手", owned: false },
+  { id: "shoma-ssr01", no: "042", name: "しょうま", variant: "誕生日シャンパン", rarity: "SSR", art: "full", imageUrl: "./assets/cards/shoma-ssr01.png", obtainCondition: "誕生日の来店記念で入手（3月・オリシャンを注文）", owned: false },
 
-  /* ===================== ユウタ（画像は今後 / 枠フォールバック） =====================
-   * ユウタは SSR と SECRET を持つキャラ。画像が入ったら art:"full" と imageUrl を設定。 */
-  {
-    id: "yuta-ssr-043",
-    no: "043",
-    name: "ユウタ",
-    rarity: "SSR",
-    attribute: "ゲーム",
-    catchCopy: "勝っても負けても、飲み干せ。",
-    skillName: "勝負師",
-    skillDescription: "飲みゲーの場を読み切り、一気に温度を上げる伝説の仕掛け人。",
-    obtainCondition: "来店記念（周年・特別な日）で入手",
-    imageUrl: null,
-    owned: false,
-  },
-  {
-    id: "yuta-secret-044",
-    no: "044",
-    name: "ユウタ",
-    rarity: "SECRET",
-    attribute: "伝説",
-    catchCopy: "その一杯は、記録に残らない。",
-    skillName: "朝まで確定",
-    skillDescription: "気づけば閉店まで。本人しか知らないネタが眠っている。",
-    obtainCondition: "？？？（本人しか知らない条件）",
-    imageUrl: null,
-    owned: false,
-  },
+  /* ============================ ゆうた ============================ */
+  { id: "yuta-ssr01", no: "043", name: "ゆうた", variant: "誕生日シャンパン", rarity: "SSR", art: "full", imageUrl: "./assets/cards/yuta-ssr01.png", obtainCondition: "誕生日の来店記念で入手（8/20・オリシャンを注文）", owned: false },
+
+  /* ===================== 夏限定シークレット（7・8月だけ通常ガチャに出現／SRと同確率） =====================
+   * gacha:true で通常ガチャ対象に。gachaBucket:"SR" でSRと同じ5%枠を共有（＝SRと同確率帯）。
+   * months:[7,8] で7月・8月だけ排出。期間外は未所持ならLOCKEDのまま図鑑に並ぶ。 */
+  { id: "akito-secret01", no: "044", name: "あきと", variant: "夏夜の影", rarity: "SECRET", art: "full", imageUrl: "./assets/cards/akito-secret01.png", obtainCondition: "夏限定ガチャ（7・8月）でSRと同確率で入手", owned: false, gacha: true, gachaBucket: "SR", months: [7, 8] },
+  { id: "kakeru-secret01", no: "045", name: "かける", variant: "夏夜のスピードスター", rarity: "SECRET", art: "full", imageUrl: "./assets/cards/kakeru-secret01.png", obtainCondition: "夏限定ガチャ（7・8月）でSRと同確率で入手", owned: false, gacha: true, gachaBucket: "SR", months: [7, 8] },
+  { id: "yuta-secret01", no: "046", name: "ゆうた", variant: "夏夜の支配者", rarity: "SECRET", art: "full", imageUrl: "./assets/cards/yuta-secret01.png", obtainCondition: "夏限定ガチャ（7・8月）でSRと同確率で入手", owned: false, gacha: true, gachaBucket: "SR", months: [7, 8] },
+  { id: "shoma-secret01", no: "047", name: "しょうま", variant: "夏夜のジェントルマン", rarity: "SECRET", art: "full", imageUrl: "./assets/cards/shoma-secret01.png", obtainCondition: "夏限定ガチャ（7・8月）でSRと同確率で入手", owned: false, gacha: true, gachaBucket: "SR", months: [7, 8] },
 ];
