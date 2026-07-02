@@ -1,0 +1,9 @@
+# OS / editor
+.DS_Store
+*.log
+
+# ローカルのプレビュー/ハーネス設定（マシン固有）
+.claude/
+
+# 依存（将来Node化した時用）
+node_modules/

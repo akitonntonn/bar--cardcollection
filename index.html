@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a1330" />
+    <meta
+      name="description"
+      content="BAR & のスタッフ・常連・イベント限定カードを集めるWeb図鑑。集めて、見せて、またBAR &に来たくなる。"
+    />
+    <title>& STAFF CARD COLLECTION | BAR &amp;</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&family=Noto+Sans+JP:wght@500;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="bg-fx" aria-hidden="true"></div>
+    <div class="scanlines" aria-hidden="true"></div>
+
+    <main class="shell">
+      <!-- ===================== 1. HERO ===================== -->
+      <header class="hero">
+        <div class="hero__inner">
+          <span class="hero__eyebrow eyebrow">Trading Staff Cards</span>
+          <h1 class="hero__title">
+            <span class="amp">&amp;</span>STAFF<br />CARD COLLECTION
+          </h1>
+          <p class="hero__subtitle">集めて、見せて、またBAR &amp;に来たくなる。</p>
+
+          <button id="gachaBtn" class="btn gacha" type="button">
+            <span class="gacha__icon" aria-hidden="true">🎴</span>
+            <span>今日の1枚を引く</span>
+          </button>
+          <div id="gachaStatus" class="gacha-status" aria-live="polite"></div>
+          <p class="gacha__note">
+            1日1回引けます（被りあり）。SR=低確率／SSR=来店記念のみ。被り5枚で無料ガチャ🎁
+          </p>
+        </div>
+      </header>
+
+      <!-- ===================== 2. STATS ===================== -->
+      <section class="stats" id="stats" aria-label="コレクション状況">
+        <!-- JSで描画 -->
+      </section>
+
+      <!-- ===================== 3. FILTERS ===================== -->
+      <div class="section-head">
+        <h2>コレクション</h2>
+        <span class="eyebrow">Filter</span>
+      </div>
+      <nav class="filters" id="filters" aria-label="レアリティで絞り込み">
+        <!-- JSで描画 -->
+      </nav>
+
+      <!-- ===================== 4. COLLECTION GRID ===================== -->
+      <section
+        class="grid"
+        id="grid"
+        aria-label="スタッフカード一覧"
+        aria-live="polite"
+      >
+        <!-- JSで描画 -->
+      </section>
+
+      <footer class="site-foot">
+        <p class="foot-logo">BAR <span class="amp">&amp;</span></p>
+        <p>夜・ゲーム・スタッフ愛・コレクション。集めるほど、また会いたくなる。</p>
+        <p class="foot-soon">
+          COMING SOON — 来店QR / お客さんアカウント / Instagram連携
+        </p>
+        <!-- デモ操作：本番では非表示。URLに ?demo=1 を付けた時だけ表示 -->
+        <div class="demo-controls" id="demoControls" aria-label="デモ操作" hidden>
+          <span class="demo-controls__label">デモ操作</span>
+          <button id="demoNextDay" class="btn demo-btn" type="button">翌日にする（デイリー回復）</button>
+          <button id="demoReset" class="btn demo-btn" type="button">リセット</button>
+        </div>
+      </footer>
+    </main>
+
+    <!-- ===================== 5. DETAIL MODAL ===================== -->
+    <div class="modal" id="modal" hidden>
+      <div class="modal__backdrop" data-close="true"></div>
+      <div
+        class="modal__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modalTitle"
+      >
+        <button class="modal__close" id="modalClose" type="button" data-close="true" aria-label="閉じる">
+          ✕
+        </button>
+        <div class="modal__body" id="modalBody">
+          <!-- JSで描画。aria-labelledby 用に id="modalTitle" を中に持たせる -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== TOAST ===================== -->
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="./data/cards.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
