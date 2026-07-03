@@ -53,8 +53,10 @@
   let session = null; // ログインセッション（null=未ログイン）
   let counts = {}; // 所持枚数マップ { cardId: 枚数 }（Supabaseの user_cards から）
   // サーバ側のガチャ状態（profiles 由来）
-  let serverState = { bonus_pulls: 0, dupe_stock: 0, daily_available: false, display_name: "" };
+  let serverState = { bonus_pulls: 0, dupe_stock: 0, daily_available: false, display_name: "", is_admin: false };
   let busy = false; // ガチャ多重実行ガード
+  let authReady = !sb; // 初回セッション確認が済んだか（ちらつき防止。sb無しなら即確定）
+  const REDEEM_KEY = "and-card:pendingRedeem"; // QRコード（?redeem=）の一時保管
 
   let activeFilter = "ALL";
   let newlyUnlockedId = null; // ガチャ直後に NEW! を付けるID
@@ -454,6 +456,12 @@
       "</div>" +
       "</div>" +
       statusHtml +
+      // シェア（所持カードのみ。スマホは共有シート/PCはコピー）
+      (owned
+        ? '<button type="button" class="btn share-btn" data-share-id="' +
+          esc(card.id) +
+          '">📤 シェアする</button>'
+        : "") +
       "</div>" +
       "</div>"
     );
@@ -645,6 +653,13 @@
   function renderGachaStatus() {
     if (!els.gachaStatus) return;
     const btnLabel = els.gachaBtn.querySelector("span:last-child");
+    // 初回セッション確認中はボタンを触らせない（ちらつき/誤タップ防止）
+    if (sb && !authReady) {
+      els.gachaBtn.disabled = true;
+      if (btnLabel) btnLabel.textContent = "読み込み中…";
+      els.gachaStatus.innerHTML = "";
+      return;
+    }
     const seasonHtml = summerSecretsActive()
       ? '<div class="gs-season">🌴 夏限定シークレット出現中（7・8月／SRと同確率）</div>'
       : "";
@@ -702,12 +717,21 @@
       els.authBar.innerHTML = '<span class="authbar__hello">オフライン表示</span>';
       return;
     }
+    // 初回セッション確認が終わるまでは「ようこそ！」を出さない（ちらつき防止）
+    if (!authReady) {
+      els.authBar.innerHTML = '<span class="authbar__hello">読み込み中…</span>';
+      return;
+    }
     if (session) {
       const name = esc(
         serverState.display_name || (session.user && session.user.email) || "会員"
       );
       els.authBar.innerHTML =
         '<span class="authbar__hello">👤 ' + name + " さん</span>" +
+        '<button type="button" class="authbar__btn" id="editNameBtn" title="表示名を変更">✏️ 名前</button>' +
+        (serverState.is_admin
+          ? '<a class="authbar__btn admin" href="./admin.html">🛠 管理</a>'
+          : "") +
         '<button type="button" class="authbar__btn" id="logoutBtn">ログアウト</button>';
     } else {
       els.authBar.innerHTML =
@@ -727,6 +751,9 @@
       '<div class="auth-form">' +
       '<h3 id="modalTitle">会員登録 / ログイン</h3>' +
       '<p class="auth-lead">メールアドレスに<strong>ログイン用リンク</strong>を送ります。<br />パスワードは不要。届いたリンクを開くだけ。</p>' +
+      '<button type="button" class="btn btn-google" id="googleBtn">' +
+      '<span class="g-mark" aria-hidden="true">G</span> Googleでログイン</button>' +
+      '<div class="auth-divider"><span>または メールで</span></div>' +
       '<form id="authForm" novalidate>' +
       '<input type="email" id="authEmail" class="auth-input" required placeholder="you@example.com" autocomplete="email" inputmode="email" aria-label="メールアドレス" />' +
       '<button type="submit" class="btn primary auth-submit">ログインリンクを送る</button>' +
@@ -790,20 +817,196 @@
     }
   }
 
+  // Googleでログイン（Supabase側でプロバイダ有効化が必要）
+  async function onGoogleLogin() {
+    if (!sb) return;
+    try {
+      const res = await sb.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin + window.location.pathname },
+      });
+      if (res.error) throw res.error;
+      // 成功時はGoogleへ画面遷移する（ここには戻ってこない）
+    } catch (err) {
+      const msgEl = document.getElementById("authMsg");
+      const text = (err && (err.message || err.error_description)) || "";
+      if (msgEl) {
+        msgEl.textContent = /not enabled|disabled|unsupported/i.test(text)
+          ? "Googleログインはただいま準備中です。メールでログインしてください🙏"
+          : "Googleログインに失敗しました: " + (text || "不明なエラー");
+        msgEl.classList.remove("is-ok");
+      }
+    }
+  }
+
+  /* ------------------- プロフィール（表示名の変更） ------------------- */
+  function openProfileModal() {
+    if (!sb || !session) return;
+    lastFocused = document.activeElement;
+    els.modalBody.innerHTML =
+      '<div class="auth-form">' +
+      '<h3 id="modalTitle">表示名の変更</h3>' +
+      '<p class="auth-lead">図鑑で表示される名前です（20文字まで）。</p>' +
+      '<form id="profileForm" novalidate>' +
+      '<input type="text" id="profileName" class="auth-input" maxlength="20" placeholder="例：あきと" value="' +
+      esc(serverState.display_name || "") +
+      '" aria-label="表示名" />' +
+      '<button type="submit" class="btn primary auth-submit">保存する</button>' +
+      "</form>" +
+      '<p class="auth-msg" id="profileMsg" aria-live="polite"></p>' +
+      "</div>";
+    showModalShell();
+    const input = document.getElementById("profileName");
+    if (input) input.focus();
+  }
+
+  async function onProfileSubmit(e) {
+    e.preventDefault();
+    if (!sb || !session) return;
+    const input = document.getElementById("profileName");
+    const msgEl = document.getElementById("profileMsg");
+    const name = ((input && input.value) || "").trim();
+    if (!name) {
+      if (msgEl) msgEl.textContent = "名前を入力してください。";
+      return;
+    }
+    let error = null;
+    try {
+      const res = await sb.from("profiles").update({ display_name: name }).eq("id", session.user.id);
+      error = res.error;
+    } catch (err) {
+      error = err;
+    }
+    if (error) {
+      if (msgEl) msgEl.textContent = "保存に失敗しました: " + (error.message || error);
+      return;
+    }
+    serverState.display_name = name;
+    renderAuthBar();
+    closeModal();
+    showToast("表示名を保存しました✅");
+  }
+
+  /* ------------------- シェア（Instagram等への導線） ------------------- */
+  async function doShare(cardId) {
+    const card = baseCards.find((c) => c.id === cardId);
+    if (!card) return;
+    const url = window.location.origin + window.location.pathname;
+    const text =
+      "BAR &『" +
+      card.name +
+      (card.variant ? "／" + card.variant : "") +
+      "』(" +
+      card.rarity +
+      ") をゲット！ #BARand #スタッフカード図鑑";
+    // スマホはOS共有シート（Instagram含む）、PCはクリップボードにコピー
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "& STAFF CARD COLLECTION", text: text, url: url });
+        return;
+      } catch (e) {
+        if (e && e.name === "AbortError") return; // ユーザーが閉じただけ
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(text + " " + url);
+      showToast("シェア用テキストをコピーしました📋 Instagram等に貼り付けてね");
+    } catch (e) {
+      showToast("コピーできませんでした🙏");
+    }
+  }
+
+  /* ------------------- QRコード引換（?redeem=CODE） ------------------- */
+  function hasPendingRedeem() {
+    try {
+      return !!localStorage.getItem(REDEEM_KEY);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // URLの ?redeem=CODE を退避してURLから消す（リロードで二重実行しない）
+  function checkRedeemParam() {
+    const m = window.location.search.match(/[?&]redeem=([A-Za-z0-9-]+)/);
+    if (!m) return;
+    try {
+      localStorage.setItem(REDEEM_KEY, m[1]);
+    } catch (e) {}
+    try {
+      history.replaceState(null, "", window.location.pathname);
+    } catch (e) {}
+  }
+
+  // ログイン済みなら退避中のコードをサーバで引換
+  async function consumePendingRedeem() {
+    if (!sb || !session) return;
+    let code = null;
+    try {
+      code = localStorage.getItem(REDEEM_KEY);
+    } catch (e) {}
+    if (!code) return;
+    try {
+      localStorage.removeItem(REDEEM_KEY);
+    } catch (e) {}
+
+    let res;
+    try {
+      res = await sb.rpc("redeem_code", { p_code: code });
+    } catch (e) {
+      res = { error: e };
+    }
+    if (res.error) {
+      showToast("QRコードの適用に失敗: " + (res.error.message || "通信エラー"));
+      return;
+    }
+    const d = res.data;
+    if (!d || !d.ok) {
+      const reasons = {
+        not_found: "無効なコードです",
+        expired: "期限切れのコードです",
+        exhausted: "使用上限に達したコードです",
+        already_used: "このコードは使用済みです",
+      };
+      showToast("🎫 " + (reasons[d && d.reason] || "コードを適用できませんでした"));
+      return;
+    }
+    if (d.kind === "pulls") {
+      serverState.bonus_pulls += d.pulls;
+      renderGachaStatus();
+      showToast("🎁 ガチャ " + d.pulls + "回分をゲット！");
+    } else {
+      const card = baseCards.find((c) => c.id === d.card.id) || d.card;
+      counts[card.id] = (counts[card.id] || 0) + 1;
+      if (d.was_new) newlyUnlockedId = card.id;
+      renderStats();
+      renderGrid();
+      renderGachaStatus();
+      showToast("🎉 特別なカードをゲット！");
+      openModal(card);
+    }
+  }
+
   // 認証状態が変わった時（初回ロード / ログイン / ログアウト）
   async function onAuth(newSession) {
+    authReady = true; // 初回セッション確認が完了（ちらつき解除）
     session = newSession || null;
     if (session) {
       await loadUserData();
       if (!els.modal.hidden) closeModal(); // ログイン成功でログインモーダルを閉じる
     } else {
       counts = {};
-      serverState = { bonus_pulls: 0, dupe_stock: 0, daily_available: false, display_name: "" };
+      serverState = { bonus_pulls: 0, dupe_stock: 0, daily_available: false, display_name: "", is_admin: false };
     }
     renderAuthBar();
     renderStats();
     renderGrid();
     renderGachaStatus();
+    if (session) {
+      await consumePendingRedeem(); // QRコードで来た場合はここで引換
+    } else if (hasPendingRedeem()) {
+      showToast("🎫 QRコードの受け取りにはログインが必要です");
+      openAuthModal();
+    }
   }
 
   // ログインユーザーの所持カード＆ガチャ状態を取得
@@ -815,7 +1018,7 @@
       for (let i = 0; i < 3 && !prof; i++) {
         const r = await sb
           .from("profiles")
-          .select("bonus_pulls,dupe_stock,last_daily_date,display_name")
+          .select("bonus_pulls,dupe_stock,last_daily_date,display_name,is_admin")
           .eq("id", uid)
           .maybeSingle();
         prof = r.data;
@@ -832,6 +1035,7 @@
         dupe_stock: (prof && prof.dupe_stock) || 0,
         daily_available: !prof || prof.last_daily_date !== today,
         display_name: (prof && prof.display_name) || (session.user && session.user.email) || "",
+        is_admin: !!(prof && prof.is_admin),
       };
     } catch (e) {
       counts = {}; // 失敗しても未所持表示で継続（アプリは壊さない）
@@ -876,20 +1080,33 @@
     // ガチャ
     els.gachaBtn.addEventListener("click", drawGacha);
 
-    // 認証バー（ログイン / ログアウト）
+    // 認証バー（ログイン / ログアウト / 表示名変更）
     if (els.authBar) {
       els.authBar.addEventListener("click", function (e) {
         if (e.target.closest("#loginBtn")) {
           openAuthModal();
+        } else if (e.target.closest("#editNameBtn")) {
+          openProfileModal();
         } else if (e.target.closest("#logoutBtn") && sb) {
           sb.auth.signOut();
         }
       });
     }
 
-    // モーダル内のログインフォーム送信（イベント委譲。submitはバブリングする）
+    // モーダル内のフォーム送信（イベント委譲。submitはバブリングする）
     els.modalBody.addEventListener("submit", function (e) {
       if (e.target && e.target.id === "authForm") onAuthSubmit(e);
+      if (e.target && e.target.id === "profileForm") onProfileSubmit(e);
+    });
+
+    // モーダル内のボタン（Googleログイン / シェア）
+    els.modalBody.addEventListener("click", function (e) {
+      if (e.target.closest("#googleBtn")) {
+        onGoogleLogin();
+        return;
+      }
+      const shareBtn = e.target.closest("[data-share-id]");
+      if (shareBtn) doShare(shareBtn.getAttribute("data-share-id"));
     });
 
     // モーダルを閉じる（✕ / 背景）
@@ -907,12 +1124,27 @@
         '<p class="grid__empty">カードデータが読み込めませんでした。</p>';
       return;
     }
+    checkRedeemParam(); // QRコード（?redeem=CODE）を退避
     renderAuthBar();
     renderStats();
     renderFilters();
     renderGrid();
     renderGachaStatus();
     bindEvents();
+
+    // カタログ同期チェック（DBと表示のカード数がズレたら開発者向けに警告）
+    if (sb) {
+      sb.from("cards")
+        .select("id", { head: true, count: "exact" })
+        .then(function (r) {
+          if (r && r.count != null && r.count !== baseCards.length) {
+            console.warn(
+              "[and-card] カード数が不一致: DB=" + r.count + "枚 / 表示=" + baseCards.length +
+                "枚 — `node supabase/generate_seed.mjs` → seed_cards.sql を再Runしてください"
+            );
+          }
+        });
+    }
 
     // 認証状態を購読（初回セッション/ログイン/ログアウトで onAuth を呼ぶ）
     // ※ コールバック内で他のSupabase呼び出しをawaitするとデッドロックし得るため、

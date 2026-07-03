@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <title>& ADMIN | BAR &amp;</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&family=Noto+Sans+JP:wght@500;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      /* ===== 管理ページ専用の軽い上書き ===== */
+      .admin-shell { max-width: 720px; margin: 0 auto; padding: 18px 14px 60px; }
+      .admin-head {
+        display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+      .admin-head h1 {
+        font-weight: 900; font-size: 1.5rem; color: #fff; margin: 0;
+        text-shadow: 3px 3px 0 var(--ink);
+      }
+      .admin-head .back {
+        font-weight: 800; font-size: 0.8rem; color: var(--ink);
+        background: var(--yellow); border: 2px solid var(--ink); border-radius: 8px;
+        box-shadow: 2px 2px 0 var(--ink); padding: 6px 10px; text-decoration: none;
+      }
+      .admin-head #adminAuth { margin-left: auto; display: flex; gap: 8px; align-items: center;
+        color: #fff; font-size: 0.78rem; font-weight: 700; flex-wrap: wrap; }
+      .admin-msg { color: #ffd7d7; font-weight: 800; line-height: 1.7; }
+      .admin-card {
+        background: rgba(255, 255, 255, 0.06);
+        border: var(--bw) solid var(--ink);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 16px 14px;
+        margin-bottom: 18px;
+      }
+      .admin-card h2 { color: var(--yellow); font-size: 1.05rem; font-weight: 900; margin: 0 0 12px; }
+      .admin-card h3 { color: #fff; font-size: 0.9rem; font-weight: 800; margin: 18px 0 8px; }
+      .admin-card form { display: flex; flex-wrap: wrap; gap: 8px; }
+      .admin-card .auth-input { flex: 1 1 200px; padding: 10px 12px; }
+      .admin-card select.auth-input { appearance: auto; }
+      .admin-card .btn { padding: 10px 14px; font-size: 0.9rem; }
+      .field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 140px; }
+      .field label { color: rgba(255,255,255,.8); font-size: 0.72rem; font-weight: 800;
+        font-family: var(--font-mono); }
+      .user-box {
+        margin-top: 12px; padding: 12px; border: 2px dashed rgba(255,255,255,.35);
+        border-radius: 10px; color: #fff; font-size: 0.9rem; line-height: 1.8;
+      }
+      .user-box b { color: var(--lime); }
+      .act-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+      .act-row .auth-input { flex: 0 1 90px; }
+      .act-row select.auth-input { flex: 1 1 220px; }
+      .code-box {
+        margin-top: 14px; padding: 14px; text-align: center;
+        background: rgba(0,0,0,.35); border: 2px solid var(--lime); border-radius: 12px;
+      }
+      .code-box .code {
+        font-family: var(--font-mono); font-weight: 800; font-size: 1.6rem;
+        letter-spacing: 0.2em; color: var(--lime);
+      }
+      .code-box .url { color: #cfc; font-size: 0.72rem; word-break: break-all; margin: 8px 0; }
+      .code-box #qrBox { display: grid; place-items: center; margin: 10px auto; background:#fff;
+        width: 196px; height: 196px; padding: 8px; border-radius: 8px; }
+      table.codes { width: 100%; border-collapse: collapse; color: #fff; font-size: 0.74rem; }
+      table.codes th, table.codes td {
+        border-bottom: 1px solid rgba(255,255,255,.2); padding: 6px 4px; text-align: left;
+      }
+      table.codes th { color: var(--cyan); font-family: var(--font-mono); }
+      table.codes .mono { font-family: var(--font-mono); font-weight: 800; }
+    </style>
+  </head>
+  <body>
+    <div class="bg-fx" aria-hidden="true"></div>
+
+    <main class="shell admin-shell">
+      <header class="admin-head">
+        <h1>🛠 &amp; ADMIN</h1>
+        <a class="back" href="./index.html">← 図鑑へ</a>
+        <div id="adminAuth"></div>
+      </header>
+      <p class="admin-msg" id="adminMsg"></p>
+
+      <!-- ログイン（未ログイン時のみ表示） -->
+      <section class="admin-card" id="loginBox" hidden>
+        <h2>管理者ログイン</h2>
+        <button type="button" class="btn btn-google" id="googleBtn">
+          <span class="g-mark" aria-hidden="true">G</span> Googleでログイン
+        </button>
+        <div class="auth-divider"><span>または メールで</span></div>
+        <form id="loginForm" novalidate>
+          <input type="email" id="loginEmail" class="auth-input" placeholder="admin@example.com"
+                 autocomplete="email" inputmode="email" aria-label="メールアドレス" />
+          <button type="submit" class="btn primary">ログインリンクを送る</button>
+        </form>
+        <p class="auth-msg" id="loginMsg" aria-live="polite"></p>
+      </section>
+
+      <!-- 管理パネル（管理者のみ表示） -->
+      <section id="panel" hidden>
+        <!-- お客さん検索と付与 -->
+        <div class="admin-card">
+          <h2>👤 お客さん検索 → 付与</h2>
+          <form id="searchForm" novalidate>
+            <input type="text" id="searchEmail" class="auth-input"
+                   placeholder="メールアドレス（一部でもOK）" aria-label="検索メール" />
+            <button type="submit" class="btn primary">検索</button>
+          </form>
+          <div id="userResult"></div>
+        </div>
+
+        <!-- QRコード発行 -->
+        <div class="admin-card">
+          <h2>🎫 QRコード発行</h2>
+          <form id="codeForm" novalidate>
+            <div class="field">
+              <label for="codeKind">種類</label>
+              <select id="codeKind" class="auth-input">
+                <option value="card">カード付与（誕生日SSR・来店記念）</option>
+                <option value="pulls">ガチャ回数付与（◯円利用ボーナス）</option>
+              </select>
+            </div>
+            <div class="field" id="cardField">
+              <label for="codeCard">カード</label>
+              <select id="codeCard" class="auth-input"></select>
+            </div>
+            <div class="field" id="pullsField" hidden>
+              <label for="codePulls">ガチャ回数</label>
+              <input type="number" id="codePulls" class="auth-input" value="5" min="1" max="99" />
+            </div>
+            <div class="field">
+              <label for="codeDays">有効期限（日）</label>
+              <input type="number" id="codeDays" class="auth-input" value="7" min="1" max="365" />
+            </div>
+            <div class="field">
+              <label for="codeUses">使用可能回数</label>
+              <input type="number" id="codeUses" class="auth-input" value="1" min="1" max="500" />
+            </div>
+            <div class="field" style="flex:1 1 100%">
+              <label for="codeNote">メモ（任意）</label>
+              <input type="text" id="codeNote" class="auth-input" placeholder="例：かける誕生日オリシャン" />
+            </div>
+            <button type="submit" class="btn primary" style="flex:1 1 100%">コードを発行する</button>
+          </form>
+          <div id="codeResult"></div>
+
+          <h3>最近の発行コード</h3>
+          <div id="codeList" style="overflow-x:auto"></div>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="./data/config.js"></script>
+    <script src="./data/cards.js"></script>
+    <script src="./admin.js"></script>
+  </body>
+</html>

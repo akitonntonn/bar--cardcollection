@@ -1237,6 +1237,61 @@ body {
   color: var(--lime);
 }
 
+/* Googleログインボタン */
+.btn-google {
+  width: 100%;
+  background: #fff;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.btn-google .g-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  font-weight: 900;
+  font-size: 0.85rem;
+  background: conic-gradient(#ea4335 0 25%, #4285f4 25% 50%, #34a853 50% 75%, #fbbc05 75% 100%);
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 2px solid rgba(255, 255, 255, 0.25);
+}
+
+/* シェアボタン（詳細モーダル・所持カードのみ） */
+.share-btn {
+  width: 100%;
+  margin-top: 12px;
+  background: var(--pink);
+  color: var(--ink);
+}
+
+/* 認証バーのリンク版ボタン（管理ページへ） */
+a.authbar__btn {
+  text-decoration: none;
+  display: inline-block;
+  line-height: 1.2;
+}
+a.authbar__btn.admin {
+  background: var(--cyan);
+}
+
 /* =========================================================================
  * TOAST
  * ========================================================================= */
