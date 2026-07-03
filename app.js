@@ -29,9 +29,9 @@
   const RARITY_ORDER = { NORMAL: 0, RARE: 1, SR: 2, SSR: 3, SECRET: 4 };
   const RARITY_LABEL_JP = {
     NORMAL: "通常",
-    RARE: "誕生日",
-    SR: "イベント限定",
-    SSR: "伝説級",
+    RARE: "レア（17%）",
+    SR: "激レア（5%）",
+    SSR: "誕生日・来店記念",
     SECRET: "シークレット",
   };
   /* --- ガチャ設定（表示用。実際の抽選・付与は Supabase の draw_gacha が権威） ---

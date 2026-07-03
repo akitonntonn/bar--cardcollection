@@ -74,6 +74,17 @@
       }
       table.codes th { color: var(--cyan); font-family: var(--font-mono); }
       table.codes .mono { font-family: var(--font-mono); font-weight: 800; }
+      /* できることガイド・操作ブロック */
+      .help-list { margin: 0; padding: 0; list-style: none; color: #fff;
+        font-size: 0.84rem; line-height: 1.9; }
+      .help-list b { color: var(--lime); }
+      .hint { display: block; color: rgba(255,255,255,.62); font-size: 0.72rem;
+        font-weight: 700; line-height: 1.6; margin-top: 2px; }
+      .act-block { margin-top: 14px; padding-top: 12px;
+        border-top: 1px dashed rgba(255,255,255,.25); }
+      .act-title { color: var(--yellow); font-weight: 900; font-size: 0.86rem; }
+      .preset-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+      .preset-row .btn { font-size: 0.76rem; padding: 8px 10px; background: var(--cyan); }
     </style>
   </head>
   <body>
@@ -104,9 +115,23 @@
 
       <!-- 管理パネル（管理者のみ表示） -->
       <section id="panel" hidden>
+        <!-- この画面でできること -->
+        <div class="admin-card">
+          <h2>📖 この画面でできること</h2>
+          <ul class="help-list">
+            <li><b>🎁 ガチャ回数の付与</b> — お会計サービスと連動して使う（例：5,000円ご利用 → +5回）。付与した分は本人の「ボーナスガチャ」に即時追加。</li>
+            <li><b>🎂 誕生日SSRの付与</b> — 誕生日月にオリシャンを注文したお客さんへ。あきと=9月／かける=7・8／しょうま=3月／ゆうた=3/10。</li>
+            <li><b>🎴 その他カードの付与</b> — イベント景品・特別プレゼントなど自由に。</li>
+            <li><b>📍 来店記録</b> — 来店履歴として保存（今後の特典条件・集計に使用）。</li>
+            <li><b>🎫 QRコード発行</b> — 上記をQRにして「印刷して渡すだけ」にする方法。お客さんが自分のスマホで読み取り→ログイン→自動で受け取り。</li>
+          </ul>
+          <span class="hint">渡し方は2通り：①下でお客さんを検索して直接付与（その場で即反映） ②QRコードを発行して渡す（お客さん操作）。反映後、お客さん側は画面を開き直すと表示されます。</span>
+        </div>
+
         <!-- お客さん検索と付与 -->
         <div class="admin-card">
-          <h2>👤 お客さん検索 → 付与</h2>
+          <h2>👤 お客さん検索 → その場で付与</h2>
+          <span class="hint" style="margin-bottom:10px">お客さんが会員登録に使ったメールアドレスで検索します（一部でもOK）。</span>
           <form id="searchForm" novalidate>
             <input type="text" id="searchEmail" class="auth-input"
                    placeholder="メールアドレス（一部でもOK）" aria-label="検索メール" />
@@ -117,7 +142,13 @@
 
         <!-- QRコード発行 -->
         <div class="admin-card">
-          <h2>🎫 QRコード発行</h2>
+          <h2>🎫 QRコード発行（印刷して渡す用）</h2>
+          <span class="hint" style="margin-bottom:10px">よく使うパターンはこちら（押すと下のフォームに自動入力）：</span>
+          <div class="preset-row" id="presetRow">
+            <button type="button" class="btn" data-preset="bday">🎂 誕生日SSR用</button>
+            <button type="button" class="btn" data-preset="visit1">📍 来店ありがとう +1回</button>
+            <button type="button" class="btn" data-preset="spend5">💰 5,000円ご利用 +5回</button>
+          </div>
           <form id="codeForm" novalidate>
             <div class="field">
               <label for="codeKind">種類</label>

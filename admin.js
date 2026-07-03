@@ -142,40 +142,69 @@
     renderUser();
   }
 
+  function cardOption(c) {
+    return (
+      '<option value="' + esc(c.id) + '">' +
+      esc("No." + c.no + " " + c.name + (c.variant ? "／" + c.variant : "") + "（" + c.rarity + "）") +
+      "</option>"
+    );
+  }
+  function sortedCards(filter) {
+    const order = { SSR: 0, SECRET: 1, SR: 2, RARE: 3, NORMAL: 4 };
+    return cards
+      .filter(filter || (() => true))
+      .slice()
+      .sort((a, b) => (order[a.rarity] ?? 9) - (order[b.rarity] ?? 9) || a.no.localeCompare(b.no));
+  }
+
   function renderUser() {
     const u = currentUser;
-    const grantable = cards
-      .slice()
-      .sort((a, b) => {
-        const order = { SSR: 0, SECRET: 1, SR: 2, RARE: 3, NORMAL: 4 };
-        return (order[a.rarity] ?? 9) - (order[b.rarity] ?? 9) || a.no.localeCompare(b.no);
-      })
-      .map(
-        (c) =>
-          '<option value="' + esc(c.id) + '">' +
-          esc("No." + c.no + " " + c.name + (c.variant ? "／" + c.variant : "") + "（" + c.rarity + "）") +
-          "</option>"
-      )
-      .join("");
+    const ssrOptions = sortedCards((c) => c.rarity === "SSR").map(cardOption).join("");
+    const otherOptions = sortedCards((c) => c.rarity !== "SSR").map(cardOption).join("");
 
     $("userResult").innerHTML =
       '<div class="user-box">' +
       "<div><b>" + esc(u.display_name || "（名前未設定）") + "</b>（" + esc(u.email) + "）" +
       (u.is_admin ? " 🛠管理者" : "") + "</div>" +
       "<div>所持: <b>" + u.owned_kinds + "種 / " + u.total_cards + "枚</b>" +
-      " ・ ボーナス: <b>" + u.bonus_pulls + "回</b>" +
-      " ・ 被り貯金: <b>" + u.dupe_stock + "</b></div>" +
+      " ・ ボーナスガチャ: <b>" + u.bonus_pulls + "回</b>" +
+      " ・ 被り貯金: <b>" + u.dupe_stock + " / 3</b></div>" +
+
+      // --- ガチャ回数（お会計サービス連動） ---
+      '<div class="act-block">' +
+      '<div class="act-title">🎁 ガチャ回数を付与</div>' +
+      '<span class="hint">お会計サービスと連動して使う（例：5,000円ご利用→+5回／イベント参加→+1回）。本人の「ボーナスガチャ」に即時追加されます。</span>' +
       '<div class="act-row">' +
       '<input type="number" id="grantN" class="auth-input" value="1" min="1" max="99" aria-label="付与回数" />' +
-      '<button type="button" class="btn" data-act="pulls">🎁 ガチャ付与</button>' +
-      "</div>" +
+      '<span style="color:#fff;font-weight:800">回</span>' +
+      '<button type="button" class="btn" data-act="pulls">付与する</button>' +
+      "</div></div>" +
+
+      // --- 誕生日SSR（オリシャン特典） ---
+      '<div class="act-block">' +
+      '<div class="act-title">🎂 誕生日SSRを付与</div>' +
+      '<span class="hint">誕生日月にオリジナルシャンパンを注文したお客さんへ。提供月：あきと=9月／かける=7・8／しょうま=3月／ゆうた=3/10。</span>' +
       '<div class="act-row">' +
-      '<select id="grantCard" class="auth-input" aria-label="付与カード">' + grantable + "</select>" +
-      '<button type="button" class="btn" data-act="card">🎴 カード付与</button>' +
-      "</div>" +
+      '<select id="grantSSR" class="auth-input" aria-label="付与するSSR">' + ssrOptions + "</select>" +
+      '<button type="button" class="btn" data-act="ssr">SSRを付与</button>' +
+      "</div></div>" +
+
+      // --- その他のカード ---
+      '<div class="act-block">' +
+      '<div class="act-title">🎴 その他のカードを付与</div>' +
+      '<span class="hint">イベント景品・特別プレゼントなど自由に使えます（夏限定シークレットもここから配布可能）。</span>' +
       '<div class="act-row">' +
-      '<button type="button" class="btn" data-act="visit">📍 来店記録</button>' +
-      "</div>" +
+      '<select id="grantCard" class="auth-input" aria-label="付与カード">' + otherOptions + "</select>" +
+      '<button type="button" class="btn" data-act="card">付与する</button>' +
+      "</div></div>" +
+
+      // --- 来店記録 ---
+      '<div class="act-block">' +
+      '<div class="act-title">📍 来店を記録</div>' +
+      '<span class="hint">来店履歴として保存します（カードや回数は増えません。今後の特典条件・集計用）。</span>' +
+      '<div class="act-row">' +
+      '<button type="button" class="btn" data-act="visit">今日の来店を記録する</button>' +
+      "</div></div>" +
       "</div>";
   }
 
@@ -194,6 +223,16 @@
         });
         if (error) throw error;
         toast("🎁 ガチャ " + (data && data.granted) + " 回を付与しました");
+      } else if (act === "ssr") {
+        // 誕生日SSR＝来店記念として記録（履歴のsourceが'visit'になる）
+        const cardId = $("grantSSR").value;
+        const { data, error } = await sb.rpc("grant_card", {
+          target: currentUser.id,
+          p_card_id: cardId,
+          p_source: "visit",
+        });
+        if (error) throw error;
+        toast("🎂 誕生日SSRを付与しました" + (data && data.was_new ? "（NEW!）" : "（被り）"));
       } else if (act === "card") {
         const cardId = $("grantCard").value;
         const { data, error } = await sb.rpc("grant_card", {
@@ -243,6 +282,32 @@
     const isCard = $("codeKind").value === "card";
     $("cardField").hidden = !isCard;
     $("pullsField").hidden = isCard;
+  }
+
+  // よく使うパターンをフォームへ自動入力
+  function applyPreset(name) {
+    if (name === "bday") {
+      $("codeKind").value = "card";
+      // カード一覧はSSRが先頭に並んでいる（fillCardSelectの並び順）
+      $("codeCard").selectedIndex = 0;
+      $("codeDays").value = 31;
+      $("codeUses").value = 1;
+      $("codeNote").value = "誕生日オリシャン特典";
+    } else if (name === "visit1") {
+      $("codeKind").value = "pulls";
+      $("codePulls").value = 1;
+      $("codeDays").value = 1; // 当日限り
+      $("codeUses").value = 1;
+      $("codeNote").value = "来店ありがとうガチャ";
+    } else if (name === "spend5") {
+      $("codeKind").value = "pulls";
+      $("codePulls").value = 5;
+      $("codeDays").value = 7;
+      $("codeUses").value = 1;
+      $("codeNote").value = "5,000円ご利用特典";
+    }
+    onKindChange();
+    toast("フォームに入力しました。内容を確認して「発行」を押してください");
   }
 
   async function onCodeSubmit(e) {
@@ -354,6 +419,10 @@
     $("userResult").addEventListener("click", onUserAction);
     $("codeKind").addEventListener("change", onKindChange);
     $("codeForm").addEventListener("submit", onCodeSubmit);
+    $("presetRow").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-preset]");
+      if (b) applyPreset(b.getAttribute("data-preset"));
+    });
     $("codeList").addEventListener("click", (e) => {
       const b = e.target.closest("[data-code]");
       if (b) showCode(b.getAttribute("data-code"));

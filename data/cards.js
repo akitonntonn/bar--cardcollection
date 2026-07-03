@@ -38,8 +38,8 @@ window.AND_CARDS = [
   { id: "akito-n09", no: "009", name: "あきと", variant: "夜の支配者", rarity: "NORMAL", art: "full", imageUrl: "./assets/cards/akito-n09.png", obtainCondition: "通常ガチャで入手", owned: false },
   { id: "akito-r01", no: "010", name: "あきと", variant: "紅月の影忍", rarity: "RARE", art: "full", imageUrl: "./assets/cards/akito-r01.png", obtainCondition: "通常ガチャ（低確率）で入手", owned: false},
   { id: "akito-r02", no: "011", name: "あきと", variant: "鎖のハンター", rarity: "RARE", art: "full", imageUrl: "./assets/cards/akito-r02.png", obtainCondition: "通常ガチャ（低確率）で入手", owned: false },
-  { id: "akito-sr01", no: "012", name: "あきと", variant: "忍・チャクラ", rarity: "SR", art: "full", imageUrl: "./assets/cards/akito-sr01.png", obtainCondition: "イベント・特別ガチャで入手", owned: false},
-  { id: "akito-sr02", no: "013", name: "あきと", variant: "夜のAKITO BAR", rarity: "SR", art: "full", imageUrl: "./assets/cards/akito-sr02.png", obtainCondition: "イベント・特別ガチャで入手", owned: false },
+  { id: "akito-sr01", no: "012", name: "あきと", variant: "忍・チャクラ", rarity: "SR", art: "full", imageUrl: "./assets/cards/akito-sr01.png", obtainCondition: "通常ガチャ（激レア・5%枠）で入手", owned: false},
+  { id: "akito-sr02", no: "013", name: "あきと", variant: "夜のAKITO BAR", rarity: "SR", art: "full", imageUrl: "./assets/cards/akito-sr02.png", obtainCondition: "通常ガチャ（激レア・5%枠）で入手", owned: false },
   { id: "akito-ssr01", no: "014", name: "あきと", variant: "誕生日シャンパン", rarity: "SSR", art: "full", imageUrl: "./assets/cards/akito-ssr01.png", obtainCondition: "誕生日の来店記念で入手（9月・オリシャンを注文）", owned: false },
 
   /* ============================ かける ============================ */
@@ -54,8 +54,8 @@ window.AND_CARDS = [
   { id: "kakeru-n09", no: "023", name: "かける", variant: "サッカー", rarity: "NORMAL", art: "full", imageUrl: "./assets/cards/kakeru-n09.png", obtainCondition: "通常ガチャで入手", owned: false},
   { id: "kakeru-r01", no: "024", name: "かける", variant: "稲妻ステップ", rarity: "RARE", art: "full", imageUrl: "./assets/cards/kakeru-r01.png", obtainCondition: "通常ガチャ（低確率）で入手", owned: false},
   { id: "kakeru-r02", no: "025", name: "かける", variant: "クールドリブル", rarity: "RARE", art: "full", imageUrl: "./assets/cards/kakeru-r02.png", obtainCondition: "通常ガチャ（低確率）で入手", owned: false},
-  { id: "kakeru-sr01", no: "026", name: "かける", variant: "海賊BAR", rarity: "SR", art: "full", imageUrl: "./assets/cards/kakeru-sr01.png", obtainCondition: "イベント・特別ガチャで入手", owned: false },
-  { id: "kakeru-sr02", no: "027", name: "かける", variant: "いたずら忍者", rarity: "SR", art: "full", imageUrl: "./assets/cards/kakeru-sr02.png", obtainCondition: "イベント・特別ガチャで入手", owned: false},
+  { id: "kakeru-sr01", no: "026", name: "かける", variant: "海賊BAR", rarity: "SR", art: "full", imageUrl: "./assets/cards/kakeru-sr01.png", obtainCondition: "通常ガチャ（激レア・5%枠）で入手", owned: false },
+  { id: "kakeru-sr02", no: "027", name: "かける", variant: "いたずら忍者", rarity: "SR", art: "full", imageUrl: "./assets/cards/kakeru-sr02.png", obtainCondition: "通常ガチャ（激レア・5%枠）で入手", owned: false},
   { id: "kakeru-ssr01", no: "028", name: "かける", variant: "誕生日シャンパン", rarity: "SSR", art: "full", imageUrl: "./assets/cards/kakeru-ssr01.png", obtainCondition: "誕生日の来店記念で入手（7/8・オリシャンを注文）", owned: false },
 
   /* ============================ しょうま ============================ */
@@ -69,9 +69,9 @@ window.AND_CARDS = [
   { id: "shoma-n08", no: "036", name: "しょうま", variant: "しずかな圧", rarity: "NORMAL", art: "full", imageUrl: "./assets/cards/shoma-n08.png", obtainCondition: "通常ガチャで入手", owned: false},
   { id: "shoma-r01", no: "037", name: "しょうま", variant: "ブレイブオーラ", rarity: "RARE", art: "full", imageUrl: "./assets/cards/shoma-r01.png", obtainCondition: "通常ガチャ（低確率）で入手", owned: false },
   { id: "shoma-r02", no: "038", name: "しょうま", variant: "天才メカニック", rarity: "RARE", art: "full", imageUrl: "./assets/cards/shoma-r02.png", obtainCondition: "通常ガチャ（低確率）で入手", owned: false},
-  { id: "shoma-sr01", no: "039", name: "しょうま", variant: "Good Vibes Only", rarity: "SR", art: "full", imageUrl: "./assets/cards/shoma-sr01.png", obtainCondition: "イベント・特別ガチャで入手", owned: false},
-  { id: "shoma-sr02", no: "040", name: "しょうま", variant: "ナイトライフ", rarity: "SR", art: "full", imageUrl: "./assets/cards/shoma-sr02.png", obtainCondition: "イベント・特別ガチャで入手", owned: false},
-  { id: "shoma-sr03", no: "041", name: "しょうま", variant: "カリスマオーラ", rarity: "SR", art: "full", imageUrl: "./assets/cards/shoma-sr03.png", obtainCondition: "イベント・特別ガチャで入手", owned: false },
+  { id: "shoma-sr01", no: "039", name: "しょうま", variant: "Good Vibes Only", rarity: "SR", art: "full", imageUrl: "./assets/cards/shoma-sr01.png", obtainCondition: "通常ガチャ（激レア・5%枠）で入手", owned: false},
+  { id: "shoma-sr02", no: "040", name: "しょうま", variant: "ナイトライフ", rarity: "SR", art: "full", imageUrl: "./assets/cards/shoma-sr02.png", obtainCondition: "通常ガチャ（激レア・5%枠）で入手", owned: false},
+  { id: "shoma-sr03", no: "041", name: "しょうま", variant: "カリスマオーラ", rarity: "SR", art: "full", imageUrl: "./assets/cards/shoma-sr03.png", obtainCondition: "通常ガチャ（激レア・5%枠）で入手", owned: false },
   { id: "shoma-ssr01", no: "042", name: "しょうま", variant: "誕生日シャンパン", rarity: "SSR", art: "full", imageUrl: "./assets/cards/shoma-ssr01.png", obtainCondition: "誕生日の来店記念で入手（3月・オリシャンを注文）", owned: false },
 
   /* ============================ ゆうた ============================ */
