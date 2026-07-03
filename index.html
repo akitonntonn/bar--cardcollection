@@ -26,6 +26,7 @@
       <!-- ===================== 1. HERO ===================== -->
       <header class="hero">
         <div class="hero__inner">
+          <div id="authBar" class="authbar" aria-live="polite"><!-- JSで描画 --></div>
           <span class="hero__eyebrow eyebrow">Trading Staff Cards</span>
           <h1 class="hero__title">
             <span class="amp">&amp;</span>STAFF<br />CARD COLLECTION
@@ -103,6 +104,9 @@
     <!-- ===================== TOAST ===================== -->
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
+    <!-- Supabase クライアント（認証・DB・サーバ側ガチャ） -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./data/config.js"></script>
     <script src="./data/cards.js"></script>
     <script src="./app.js"></script>
   </body>

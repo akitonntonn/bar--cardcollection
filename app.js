@@ -47,16 +47,27 @@
 
   /* ----------------------------- 状態 ----------------------------- */
   const baseCards = Array.isArray(window.AND_CARDS) ? window.AND_CARDS : [];
-  let counts = loadJSON(STORAGE_KEYS.counts, {}); // 所持枚数マップ（被り対応）
-  let bonusPulls = loadInt(STORAGE_KEYS.bonus, 0); // ボーナスガチャ残
-  let dupeStock = loadInt(STORAGE_KEYS.dupeStock, 0); // 被り貯金 0..4
-  let dailyDate = localStorage.getItem(STORAGE_KEYS.dailyDate) || null; // 最後にデイリーを使った日
+
+  // Supabase クライアント（設定＆ライブラリがあれば有効）
+  const cfg = window.AND_CONFIG || {};
+  const sb =
+    window.supabase && cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY
+      ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY)
+      : null;
+
+  let session = null; // ログインセッション（null=未ログイン）
+  let counts = {}; // 所持枚数マップ { cardId: 枚数 }（Supabaseの user_cards から）
+  // サーバ側のガチャ状態（profiles 由来）
+  let serverState = { bonus_pulls: 0, dupe_stock: 0, daily_available: false, display_name: "" };
+  let busy = false; // ガチャ多重実行ガード
+
   let activeFilter = "ALL";
   let newlyUnlockedId = null; // ガチャ直後に NEW! を付けるID
   let lastFocused = null; // モーダルを開く前のフォーカス要素
 
   /* ----------------------------- DOM ----------------------------- */
   const els = {
+    authBar: document.getElementById("authBar"),
     stats: document.getElementById("stats"),
     filters: document.getElementById("filters"),
     grid: document.getElementById("grid"),
@@ -109,16 +120,16 @@
     );
   }
   function hasDailyToday() {
-    return dailyDate !== todayStr();
+    return !!serverState.daily_available;
   }
   function pullsAvailable() {
-    return (hasDailyToday() ? 1 : 0) + bonusPulls;
+    return (hasDailyToday() ? 1 : 0) + (serverState.bonus_pulls || 0);
   }
 
-  // 所持枚数（初期データ owned:true は1枚として扱う）＋所持判定
+  // 所持枚数（Supabaseの所持マップ。未ログイン/未所持は0＝LOCKED）＋所持判定
   function cardCount(card) {
     const c = counts[card.id];
-    return c != null ? c : card.owned ? 1 : 0;
+    return c != null ? c : 0;
   }
   function isOwned(card) {
     return cardCount(card) > 0;
@@ -479,15 +490,19 @@
     );
   }
 
+  // モーダルの「開く」土台（中身は呼び出し側で入れる）。カード詳細・ガチャ・ログイン共通。
+  function showModalShell() {
+    els.modal.hidden = false;
+    document.body.style.overflow = "hidden";
+    els.modalClose.focus();
+    document.addEventListener("keydown", onModalKeydown);
+  }
+
   function openModal(card, opts) {
     opts = opts || {};
     lastFocused = document.activeElement;
     els.modalBody.innerHTML = modalMarkup(card, opts);
-    els.modal.hidden = false;
-    document.body.style.overflow = "hidden";
-    // フォーカスを閉じるボタンへ
-    els.modalClose.focus();
-    document.addEventListener("keydown", onModalKeydown);
+    showModalShell();
   }
 
   function closeModal() {
@@ -547,47 +562,6 @@
     return true;
   }
 
-  // 排出枠（gachaBucket 優先。無ければ rarity）。夏限定シークレットは "SR" 枠を共有する。
-  function gachaBucketOf(card) {
-    return card.gachaBucket || card.rarity;
-  }
-
-  // 今このタイミングで引ける対象カード一覧
-  function activeGachaCards() {
-    return baseCards.filter(isGachaCard);
-  }
-
-  // 対象カードを枠(NORMAL/RARE/SR)ごとに束ね、設定%で重み付き抽選 → その枠から1枚。
-  // 在庫の無い枠（例: R 0枚）の%は、在庫のある枠へ自動で再配分される。
-  function pickGachaCard() {
-    const pool = activeGachaCards();
-    if (!pool.length) return null;
-
-    const buckets = {};
-    pool.forEach((c) => {
-      const b = gachaBucketOf(c);
-      (buckets[b] = buckets[b] || []).push(c);
-    });
-
-    const keys = Object.keys(buckets).filter((b) =>
-      Object.prototype.hasOwnProperty.call(GACHA_RATES, b)
-    );
-    const total = keys.reduce((sum, b) => sum + GACHA_RATES[b], 0);
-    if (!keys.length || total <= 0) return null;
-
-    let roll = Math.random() * total;
-    let chosen = keys[keys.length - 1];
-    for (const b of keys) {
-      roll -= GACHA_RATES[b];
-      if (roll <= 0) {
-        chosen = b;
-        break;
-      }
-    }
-    const group = buckets[chosen];
-    return group[Math.floor(Math.random() * group.length)];
-  }
-
   // 夏限定シークレットが今出現しているか（ステータス表示用）
   function summerSecretsActive() {
     return baseCards.some(
@@ -595,89 +569,105 @@
     );
   }
 
-  function drawGacha() {
-    // 引ける回数チェック（デイリー + ボーナス）
+  async function drawGacha() {
+    if (!sb) {
+      showToast("ただいま準備中です。少し待ってね🙏");
+      return;
+    }
+    if (!session) {
+      openAuthModal(); // 未ログインならログインへ誘導
+      return;
+    }
+    if (busy) return;
     if (pullsAvailable() <= 0) {
       showToast("今日のガチャは引き切りました。また明日！🌙");
       renderGachaStatus();
       return;
     }
 
-    const card = pickGachaCard();
-    if (!card) {
-      showToast("ガチャ対象のカードがありません。");
-      return;
-    }
-    const wasNew = !isOwned(card);
+    busy = true;
+    els.gachaBtn.disabled = true;
 
-    // 回数を消費（デイリー優先→ボーナス）
-    if (hasDailyToday()) {
-      dailyDate = todayStr();
-      save(STORAGE_KEYS.dailyDate, dailyDate);
-    } else {
-      bonusPulls = Math.max(0, bonusPulls - 1);
-      save(STORAGE_KEYS.bonus, bonusPulls);
-    }
-
-    // 所持枚数を加算
-    counts[card.id] = cardCount(card) + 1;
-    save(STORAGE_KEYS.counts, counts);
-
-    // 被り救済（合計5枚でボーナス1回）
-    let gotBonus = false;
-    if (!wasNew) {
-      dupeStock += 1;
-      if (dupeStock >= DUPE_BONUS_THRESHOLD) {
-        dupeStock -= DUPE_BONUS_THRESHOLD;
-        bonusPulls += 1;
-        gotBonus = true;
-        save(STORAGE_KEYS.bonus, bonusPulls);
-      }
-      save(STORAGE_KEYS.dupeStock, dupeStock);
-    } else {
-      newlyUnlockedId = card.id;
-    }
-
-    // 抽選演出 → 結果表示
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // 抽選演出（結果が返るまでカードは伏せる）
     lastFocused = document.activeElement;
     els.modalBody.innerHTML =
       '<div class="modal__grid"><div class="modal__cardwrap">' +
-      '<span class="drawing-badge">抽選中…</span>' +
-      cardMarkup(card, { big: true }) +
+      '<div class="draw-back"><span class="draw-back__amp">&amp;</span>' +
+      '<span class="drawing-badge">抽選中…</span></div>' +
       '</div><div class="modal__info"><h3 id="modalTitle">ガチャを引いています…</h3>' +
       '<p style="opacity:.7;font-weight:700">🎴 めくると、誰が出るかな？</p></div></div>';
-    els.modal.hidden = false;
+    showModalShell();
     els.modal.classList.add("is-drawing");
-    document.body.style.overflow = "hidden";
-    els.modalClose.focus();
-    document.addEventListener("keydown", onModalKeydown);
 
-    const reveal = function () {
+    // サーバ権威のガチャ（抽選・回数消費・被り救済は全部サーバ側）
+    let data = null,
+      error = null;
+    try {
+      const res = await sb.rpc("draw_gacha");
+      data = res.data;
+      error = res.error;
+    } catch (e) {
+      error = e;
+    }
+
+    const finish = function () {
       els.modal.classList.remove("is-drawing");
+      busy = false;
+
+      if (error) {
+        closeModal();
+        showToast("エラー: " + (error.message || "通信に失敗しました"));
+        renderGachaStatus();
+        return;
+      }
+      if (!data || !data.ok) {
+        closeModal();
+        if (data && data.reason === "no_pulls") {
+          showToast("今日のガチャは引き切りました。また明日！🌙");
+        } else {
+          showToast("いまはガチャ対象のカードがありません。");
+        }
+        renderGachaStatus();
+        return;
+      }
+
+      // サーバ結果を反映（原本カタログから見つけて描画）
+      const card = baseCards.find((c) => c.id === data.card.id) || data.card;
+      counts[card.id] = (counts[card.id] || 0) + 1;
+      serverState.bonus_pulls = data.bonus_pulls;
+      serverState.dupe_stock = data.dupe_stock;
+      serverState.daily_available = data.daily_available;
+      if (data.was_new) newlyUnlockedId = card.id;
+
       renderStats();
       renderGrid();
       renderGachaStatus();
-      if (wasNew) {
+
+      if (data.was_new) {
         showToast("NEW! " + card.rarity + " " + card.name + " を入手！🎉");
-      } else if (gotBonus) {
+      } else if (data.got_bonus) {
         showToast("被り5枚達成！ボーナスガチャ +1 🎁");
       } else {
         showToast(
           "被り… " +
             card.name +
             "（所持" +
-            cardCount(card) +
+            counts[card.id] +
             "枚）｜あと" +
-            (DUPE_BONUS_THRESHOLD - dupeStock) +
+            (DUPE_BONUS_THRESHOLD - serverState.dupe_stock) +
             "枚で無料ガチャ"
         );
       }
-      openModal(card);
+
+      // 開いているモーダルの中身を結果カードへ差し替え（フォーカスは維持）
+      els.modalBody.innerHTML = modalMarkup(card, {});
+      els.modalClose.focus();
     };
 
-    if (reduceMotion) reveal();
-    else window.setTimeout(reveal, 850);
+    // ネットワーク待ちに加えて少しだけ演出を見せる
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) finish();
+    else window.setTimeout(finish, 600);
   }
 
   /* ====================================================================
@@ -685,41 +675,183 @@
    * ================================================================== */
   function renderGachaStatus() {
     if (!els.gachaStatus) return;
+    const btnLabel = els.gachaBtn.querySelector("span:last-child");
+    const seasonHtml = summerSecretsActive()
+      ? '<div class="gs-season">🌴 夏限定シークレット出現中（7・8月／SRと同確率）</div>'
+      : "";
+
+    // 未ログイン：ガチャの代わりにログイン導線を出す
+    if (!session) {
+      els.gachaBtn.disabled = false;
+      if (btnLabel) btnLabel.textContent = "会員登録してガチャを引く";
+      els.gachaStatus.innerHTML =
+        seasonHtml +
+        '<div class="gs-guest">🔑 ログインすると、1日1回ガチャ＆コレクションの保存ができます。</div>';
+      return;
+    }
+
     const avail = pullsAvailable();
     const dailyLeft = hasDailyToday() ? 1 : 0;
+    const bonus = serverState.bonus_pulls || 0;
+    const dupe = serverState.dupe_stock || 0;
 
-    // ボタンの状態・ラベル
-    els.gachaBtn.disabled = avail <= 0;
-    const btnLabel = els.gachaBtn.querySelector("span:last-child");
+    els.gachaBtn.disabled = busy || avail <= 0;
     if (btnLabel) {
       btnLabel.textContent =
         avail <= 0
           ? "また明日引ける"
           : dailyLeft
           ? "今日の1枚を引く"
-          : "ボーナスガチャを引く（残り" + bonusPulls + "）";
+          : "ボーナスガチャを引く（残り" + bonus + "）";
     }
 
-    const pct = Math.round((dupeStock / DUPE_BONUS_THRESHOLD) * 100);
-    const seasonHtml = summerSecretsActive()
-      ? '<div class="gs-season">🌴 夏限定シークレット出現中（7・8月／SRと同確率）</div>'
-      : "";
+    const pct = Math.round((dupe / DUPE_BONUS_THRESHOLD) * 100);
     els.gachaStatus.innerHTML =
       seasonHtml +
       '<div class="gs-row">' +
       '<span class="gs-pill' + (dailyLeft ? " on" : "") + '">デイリー ' +
       (dailyLeft ? "1回" : "済") +
       "</span>" +
-      '<span class="gs-pill' + (bonusPulls > 0 ? " on" : "") + '">ボーナス ' +
-      bonusPulls +
+      '<span class="gs-pill' + (bonus > 0 ? " on" : "") + '">ボーナス ' +
+      bonus +
       "回</span>" +
       '<span class="gs-pill big">引ける回数 ' + avail + "</span>" +
       "</div>" +
       '<div class="gs-dupe">' +
-      '<div class="gs-dupe-label">被り貯金 <b>' + dupeStock + " / " + DUPE_BONUS_THRESHOLD +
+      '<div class="gs-dupe-label">被り貯金 <b>' + dupe + " / " + DUPE_BONUS_THRESHOLD +
       "</b>（5枚で無料ガチャ）</div>" +
       '<div class="gs-bar"><span style="width:' + pct + '%"></span></div>' +
       "</div>";
+  }
+
+  /* ====================================================================
+   * 認証（Supabase・メールのマジックリンク）＋クラウド保存
+   * ================================================================== */
+  function renderAuthBar() {
+    if (!els.authBar) return;
+    if (!sb) {
+      els.authBar.innerHTML = '<span class="authbar__hello">オフライン表示</span>';
+      return;
+    }
+    if (session) {
+      const name = esc(
+        serverState.display_name || (session.user && session.user.email) || "会員"
+      );
+      els.authBar.innerHTML =
+        '<span class="authbar__hello">👤 ' + name + " さん</span>" +
+        '<button type="button" class="authbar__btn" id="logoutBtn">ログアウト</button>';
+    } else {
+      els.authBar.innerHTML =
+        '<span class="authbar__hello">ようこそ！</span>' +
+        '<button type="button" class="authbar__btn primary" id="loginBtn">会員登録 / ログイン</button>';
+    }
+  }
+
+  // ログイン用モーダル（メール入力 → マジックリンク送信）
+  function openAuthModal() {
+    if (!sb) {
+      showToast("ただいま準備中です🙏");
+      return;
+    }
+    lastFocused = document.activeElement;
+    els.modalBody.innerHTML =
+      '<div class="auth-form">' +
+      '<h3 id="modalTitle">会員登録 / ログイン</h3>' +
+      '<p class="auth-lead">メールアドレスに<strong>ログイン用リンク</strong>を送ります。<br />パスワードは不要。届いたリンクを開くだけ。</p>' +
+      '<form id="authForm" novalidate>' +
+      '<input type="email" id="authEmail" class="auth-input" required placeholder="you@example.com" autocomplete="email" inputmode="email" />' +
+      '<button type="submit" class="btn primary auth-submit">ログインリンクを送る</button>' +
+      "</form>" +
+      '<p class="auth-msg" id="authMsg" aria-live="polite"></p>' +
+      "</div>";
+    showModalShell();
+    const input = document.getElementById("authEmail");
+    if (input) input.focus();
+  }
+
+  async function onAuthSubmit(e) {
+    e.preventDefault();
+    if (!sb) return;
+    const input = document.getElementById("authEmail");
+    const msg = document.getElementById("authMsg");
+    const email = ((input && input.value) || "").trim();
+    if (!email) {
+      if (msg) msg.textContent = "メールアドレスを入力してください。";
+      return;
+    }
+    const btn = e.target.querySelector('button[type="submit"]');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "送信中…";
+    }
+    let error = null;
+    try {
+      const res = await sb.auth.signInWithOtp({
+        email: email,
+        options: { emailRedirectTo: window.location.origin + window.location.pathname },
+      });
+      error = res.error;
+    } catch (err) {
+      error = err;
+    }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "ログインリンクを送る";
+    }
+    if (msg) {
+      msg.textContent = error
+        ? "送信に失敗しました: " + (error.message || error)
+        : "✅ メールを送りました。届いたリンクを開いてください（迷惑メールも確認）。";
+      msg.classList.toggle("is-ok", !error);
+    }
+  }
+
+  // 認証状態が変わった時（初回ロード / ログイン / ログアウト）
+  async function onAuth(newSession) {
+    session = newSession || null;
+    if (session) {
+      await loadUserData();
+      if (!els.modal.hidden) closeModal(); // ログイン成功でログインモーダルを閉じる
+    } else {
+      counts = {};
+      serverState = { bonus_pulls: 0, dupe_stock: 0, daily_available: false, display_name: "" };
+    }
+    renderAuthBar();
+    renderStats();
+    renderGrid();
+    renderGachaStatus();
+  }
+
+  // ログインユーザーの所持カード＆ガチャ状態を取得
+  async function loadUserData() {
+    if (!sb || !session) return;
+    const uid = session.user.id;
+    try {
+      let prof = null;
+      for (let i = 0; i < 3 && !prof; i++) {
+        const r = await sb
+          .from("profiles")
+          .select("bonus_pulls,dupe_stock,last_daily_date,display_name")
+          .eq("id", uid)
+          .maybeSingle();
+        prof = r.data;
+        if (!prof) await new Promise((res) => setTimeout(res, 400)); // 登録直後のトリガー待ち
+      }
+      const uc = await sb.from("user_cards").select("card_id,count").eq("user_id", uid);
+      counts = {};
+      (uc.data || []).forEach((row) => {
+        counts[row.card_id] = row.count;
+      });
+      const today = todayStr();
+      serverState = {
+        bonus_pulls: (prof && prof.bonus_pulls) || 0,
+        dupe_stock: (prof && prof.dupe_stock) || 0,
+        daily_available: !prof || prof.last_daily_date !== today,
+        display_name: (prof && prof.display_name) || (session.user && session.user.email) || "",
+      };
+    } catch (e) {
+      counts = {}; // 失敗しても未所持表示で継続（アプリは壊さない）
+    }
   }
 
   /* ====================================================================
@@ -760,36 +892,26 @@
     // ガチャ
     els.gachaBtn.addEventListener("click", drawGacha);
 
+    // 認証バー（ログイン / ログアウト）
+    if (els.authBar) {
+      els.authBar.addEventListener("click", function (e) {
+        if (e.target.closest("#loginBtn")) {
+          openAuthModal();
+        } else if (e.target.closest("#logoutBtn") && sb) {
+          sb.auth.signOut();
+        }
+      });
+    }
+
+    // モーダル内のログインフォーム送信（イベント委譲。submitはバブリングする）
+    els.modalBody.addEventListener("submit", function (e) {
+      if (e.target && e.target.id === "authForm") onAuthSubmit(e);
+    });
+
     // モーダルを閉じる（✕ / 背景）
     els.modal.addEventListener("click", function (e) {
       if (e.target.closest("[data-close]")) closeModal();
     });
-
-    // --- デモ操作（体験版のみ / 本番では削除予定） ---
-    if (els.demoNextDay) {
-      els.demoNextDay.addEventListener("click", function () {
-        // デイリーを回復（＝翌日相当）
-        dailyDate = null;
-        localStorage.removeItem(STORAGE_KEYS.dailyDate);
-        renderGachaStatus();
-        showToast("デモ：デイリーを回復しました（翌日相当）");
-      });
-    }
-    if (els.demoReset) {
-      els.demoReset.addEventListener("click", function () {
-        if (!window.confirm("コレクションとガチャ状況をすべてリセットします。よろしいですか？")) return;
-        Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
-        counts = {};
-        bonusPulls = 0;
-        dupeStock = 0;
-        dailyDate = null;
-        newlyUnlockedId = null;
-        renderStats();
-        renderGrid();
-        renderGachaStatus();
-        showToast("デモ：リセットしました");
-      });
-    }
   }
 
   /* ====================================================================
@@ -801,13 +923,23 @@
         '<p class="grid__empty">カードデータが読み込めませんでした。</p>';
       return;
     }
-    // デモ操作は ?demo=1 の時だけ表示（本番のお客さんには出さない）
-    if (DEMO_MODE && els.demoControls) els.demoControls.hidden = false;
+    renderAuthBar();
     renderStats();
     renderFilters();
     renderGrid();
     renderGachaStatus();
     bindEvents();
+
+    // 認証状態を購読（初回セッション/ログイン/ログアウトで onAuth を呼ぶ）
+    // ※ コールバック内で他のSupabase呼び出しをawaitするとデッドロックし得るため、
+    //   setTimeout(0) で外に逃がしてから onAuth を実行する。
+    if (sb) {
+      sb.auth.onAuthStateChange(function (_event, s) {
+        window.setTimeout(function () {
+          onAuth(s);
+        }, 0);
+      });
+    }
   }
 
   if (document.readyState === "loading") {

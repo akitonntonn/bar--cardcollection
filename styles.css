@@ -1099,6 +1099,144 @@ body {
   animation: blink 0.6s steps(2) infinite;
 }
 
+/* 抽選中のカード裏面（結果が返るまで伏せる） */
+.draw-back {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--radius);
+  background: repeating-linear-gradient(45deg, var(--blue) 0 14px, #2f1fa8 14px 28px);
+  box-shadow: var(--shadow);
+  display: grid;
+  place-items: center;
+}
+.draw-back__amp {
+  font-family: var(--font-sans);
+  font-weight: 900;
+  font-size: clamp(3rem, 12vw, 5rem);
+  color: var(--yellow);
+  -webkit-text-stroke: 3px var(--ink);
+}
+
+/* =========================================================================
+ * 認証バー / ログインフォーム / ゲスト導線
+ * ========================================================================= */
+.authbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.authbar__hello {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: #fff;
+  opacity: 0.92;
+}
+.authbar__btn {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  font-size: 0.78rem;
+  color: var(--ink);
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  box-shadow: 2px 2px 0 var(--ink);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+}
+.authbar__btn.primary {
+  background: var(--lime);
+}
+.authbar__btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.authbar__btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--ink);
+}
+.authbar__btn:focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+/* ガチャ状態パネル：未ログイン時の案内 */
+.gacha-status .gs-guest {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--ink);
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 9px 12px;
+}
+
+/* ログインフォーム（モーダル内） */
+.auth-form {
+  padding: 6px 2px;
+}
+.auth-form h3 {
+  font-family: var(--font-sans);
+  font-weight: 900;
+  font-size: 1.3rem;
+  margin: 0 0 8px;
+  color: #fff;
+}
+.auth-lead {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.82);
+  margin: 0 0 16px;
+}
+.auth-form form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.auth-input {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: #fff;
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.08);
+  padding: 13px 14px;
+  width: 100%;
+}
+.auth-input:focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: 2px;
+}
+.btn.primary {
+  background: var(--blue);
+  color: #fff;
+}
+.auth-submit {
+  width: 100%;
+}
+.auth-msg {
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.55;
+  color: #ff8a8a;
+  margin: 14px 0 0;
+  min-height: 1.2em;
+}
+.auth-msg.is-ok {
+  color: var(--lime);
+}
+
 /* =========================================================================
  * TOAST
  * ========================================================================= */
