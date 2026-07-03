@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- BAR & ロゴ（金の王冠＋黒のセリフ体アンパサンド） -->
+  <rect width="512" height="512" fill="#ffffff"/>
+
+  <!-- 王冠（金・線画・左に傾き） -->
+  <g transform="translate(158,116) rotate(-14)" stroke="#b8912f" stroke-width="9" fill="none" stroke-linejoin="miter" stroke-linecap="round">
+    <!-- 本体：5つのスパイク -->
+    <path d="M -78 44 L -58 -30 L -26 24 L 4 -52 L 34 24 L 66 -30 L 86 44 Z" />
+    <!-- スパイク先端のダイヤ -->
+    <path d="M -58 -30 l -6 -9 l 6 -9 l 6 9 z" fill="#b8912f"/>
+    <path d="M 4 -52 l -6 -9 l 6 -9 l 6 9 z" fill="#b8912f"/>
+    <path d="M 66 -30 l -6 -9 l 6 -9 l 6 9 z" fill="#b8912f"/>
+    <!-- 底のライン -->
+    <line x1="-84" y1="60" x2="92" y2="60"/>
+  </g>
+
+  <!-- アンパサンド（黒・Didot系セリフ） -->
+  <text x="292" y="424" font-family="Didot, 'Bodoni 72', 'Times New Roman', serif" font-size="400" text-anchor="middle" fill="#101010">&amp;</text>
+</svg>

@@ -1,0 +1,17 @@
+{
+  "name": "& STAFF CARD COLLECTION",
+  "short_name": "&CARD",
+  "description": "BAR & のスタッフカードを集めるWeb図鑑。1日1回ガチャ・来店QRで特別カードGET。",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1330",
+  "theme_color": "#1a1330",
+  "icons": [
+    { "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

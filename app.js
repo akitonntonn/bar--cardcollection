@@ -1003,6 +1003,19 @@
     renderGachaStatus();
     if (session) {
       await consumePendingRedeem(); // QRコードで来た場合はここで引換
+
+      // ウェルカム特典の案内（新規：まだ1枚も持っておらずボーナスがある人に1回だけ）
+      let welcomed = null;
+      try {
+        welcomed = localStorage.getItem("and-card:welcomed");
+      } catch (e) {}
+      const ownedKinds = baseCards.filter(isOwned).length;
+      if (!welcomed && ownedKinds === 0 && serverState.bonus_pulls > 0) {
+        showToast("🎁 ようこそ！ウェルカム特典ガチャ" + serverState.bonus_pulls + "回プレゼント！");
+        try {
+          localStorage.setItem("and-card:welcomed", "1");
+        } catch (e) {}
+      }
     } else if (hasPendingRedeem()) {
       showToast("🎫 QRコードの受け取りにはログインが必要です");
       openAuthModal();
@@ -1144,6 +1157,11 @@
             );
           }
         });
+    }
+
+    // PWA: Service Worker登録（https or localhostのみ。失敗しても本体は動く）
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js").catch(function () {});
     }
 
     // 認証状態を購読（初回セッション/ログイン/ログアウトで onAuth を呼ぶ）

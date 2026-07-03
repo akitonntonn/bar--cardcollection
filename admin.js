@@ -78,6 +78,7 @@
     $("loginBox").hidden = true;
     $("panel").hidden = false;
     listCodes();
+    listActivity();
   }
 
   async function onLoginSubmit(e) {
@@ -404,6 +405,54 @@
       "</table>";
   }
 
+  /* --------------------------- 付与履歴 --------------------------- */
+  async function listActivity() {
+    const box = $("historyList");
+    if (!box) return;
+    box.innerHTML = '<p style="color:rgba(255,255,255,.6);font-size:.8rem">読み込み中…</p>';
+    let res;
+    try {
+      res = await sb.rpc("admin_activity_log");
+    } catch (err) {
+      res = { error: err };
+    }
+    if (res.error) {
+      // upgrade_v3.sql 未適用の場合はここに来る
+      box.innerHTML =
+        '<p class="admin-msg">履歴を取得できません: ' + esc(rpcErr(res.error)) +
+        "<br />（supabase/upgrade_v3.sql を Run すると使えるようになります）</p>";
+      return;
+    }
+    const rows = res.data || [];
+    if (!rows.length) {
+      box.innerHTML = '<p style="color:rgba(255,255,255,.6);font-size:.8rem">まだ記録がありません。</p>';
+      return;
+    }
+    const icon = {
+      "ガチャ付与": "🎁",
+      "カード付与": "🎴",
+      "カード付与(来店)": "🎂",
+      "来店記録": "📍",
+    };
+    box.innerHTML =
+      '<table class="codes"><tr><th>日時</th><th>種類</th><th>お客さん</th><th>内容</th></tr>' +
+      rows
+        .map((r) => {
+          const dt = new Date(r.created_at).toLocaleString("ja-JP", {
+            month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
+          });
+          const who = esc(r.display_name || r.email || "?");
+          return (
+            "<tr><td>" + dt + "</td><td>" + (icon[r.kind] || "") + " " + esc(r.kind) +
+            "</td><td>" + who + "</td><td>" + esc(r.what || "") +
+            (r.note ? "<br /><small>" + esc(r.note) + "</small>" : "") +
+            "</td></tr>"
+          );
+        })
+        .join("") +
+      "</table>";
+  }
+
   /* ------------------------------ 初期化 ------------------------------ */
   function init() {
     if (!sb) {
@@ -423,6 +472,7 @@
       const b = e.target.closest("[data-preset]");
       if (b) applyPreset(b.getAttribute("data-preset"));
     });
+    $("historyRefresh").addEventListener("click", listActivity);
     $("codeList").addEventListener("click", (e) => {
       const b = e.target.closest("[data-code]");
       if (b) showCode(b.getAttribute("data-code"));
