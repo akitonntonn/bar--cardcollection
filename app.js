@@ -767,11 +767,26 @@
       btn.disabled = false;
       btn.textContent = "ログインリンクを送る";
     }
-    if (msg) {
-      msg.textContent = error
-        ? "送信に失敗しました: " + (error.message || error)
-        : "✅ メールを送りました。届いたリンクを開いてください（迷惑メールも確認）。";
-      msg.classList.toggle("is-ok", !error);
+    if (error) {
+      try {
+        console.error("signInWithOtp error:", error);
+      } catch (e2) {}
+      // 空オブジェクト{}対策：拾える情報を総当たりで表示（診断しやすく）
+      const detail =
+        error.message ||
+        error.error_description ||
+        error.msg ||
+        (error.status ? "HTTP " + error.status : "") ||
+        (error.name ? error.name : "") ||
+        "不明なエラー（メール設定/ネットワークを確認。詳細はコンソール）";
+      if (msg) {
+        msg.textContent = "送信に失敗しました: " + detail;
+        msg.classList.remove("is-ok");
+      }
+    } else if (msg) {
+      msg.textContent =
+        "✅ メールを送りました。届いたリンクを開いてください（迷惑メールも確認）。";
+      msg.classList.add("is-ok");
     }
   }
 
