@@ -5,18 +5,20 @@
  * 主な責務:
  *   - カードグリッド / レアリティフィルター / ステータスの描画
  *   - カード詳細モーダル（アクセシビリティ対応）
- *   - デイリーガチャ（1日1回・被りあり・排出率・被り5枚で無料ガチャ）
- *   - 所持枚数・ガチャ回数を localStorage に保存（体験版）
+ *   - 認証（メールのマジックリンク）＋ ログイン/ログアウト
+ *   - デイリーガチャ（1日1回・被りあり・被り3枚で無料ガチャ）＝サーバ権威
+ *   - 所持枚数・ガチャ状態は Supabase（user_cards / profiles）に保存
  *
- * ▼ ガチャ経済（体験版はlocalStorage、本番はSupabaseの想定）
- *   排出率  : GACHA_RATES（SSR=来店記念/SECRET=特殊条件なので対象外）
- *   デイリー: dailyDate（今日ぶんを使ったか）＋ bonus（被り救済で貯まる無料ガチャ）
- *   所持枚数: counts { cardId: 枚数 }（被り対応）
+ * ▼ ガチャ経済（サーバ権威 / Supabase）
+ *   抽選・回数消費・被り救済はすべて DB関数 draw_gacha() 側で完結。
+ *   フロントは rpc('draw_gacha') を呼んで結果を受け取り、表示するだけ。
+ *   counts      : { cardId: 枚数 }（user_cards から）
+ *   serverState : bonus_pulls / dupe_stock / daily_available（profiles から）
+ *   ※ DUPE_BONUS_THRESHOLD はUI表示用。実際の付与判定は functions.sql と一致させる。
  *
  * ▼ 今後の拡張ポイント
- *   - お客さんアカウント : counts/bonus/dailyDate を user_cards テーブルへ移すだけ
- *   - 来店QR/来店SSR    : 店舗トークン付きURL or 管理者ポータルから付与
- *   - Instagram導線      : 公開プロフィール＋シェア画像生成
+ *   - 来店QR/来店SSR : 店舗トークン付きURL or 管理者ポータル（grant_card/record_visit）
+ *   - Instagram導線  : 公開プロフィール＋シェア画像生成
  * ========================================================================= */
 
 (function () {
@@ -32,18 +34,11 @@
     SSR: "伝説級",
     SECRET: "シークレット",
   };
-  /* --- デイリーガチャ設定（体験版 / localStorageのみ・後でSupabaseへ） ---
-   * 排出率（%）。SSR=来店記念のみ / SECRET=特殊条件 なのでガチャ対象外。
-   * ※ Rカードが0枚の間は、Rの17%は在庫のあるレア(NORMAL/SR)へ自動で再配分されます。 */
+  /* --- ガチャ設定（表示用。実際の抽選・付与は Supabase の draw_gacha が権威） ---
+   * 排出率（%）。SSR=来店記念のみ / SECRET=特殊条件 なので通常ガチャ対象外。 */
   const GACHA_RATES = { NORMAL: 78, RARE: 17, SR: 5 };
-  const DUPE_BONUS_THRESHOLD = 5; // 被り“合計”5枚で無料ガチャ1回
-
-  const STORAGE_KEYS = {
-    counts: "and-card:counts", // { cardId: 所持枚数 }
-    dailyDate: "and-card:dailyDate", // 今日のデイリーを使った日付(YYYY-MM-DD)
-    bonus: "and-card:bonus", // ボーナスガチャ残数
-    dupeStock: "and-card:dupeStock", // 被り貯金(0..4)
-  };
+  // 被り“合計”3枚で無料ガチャ1回。※ functions.sql の DUPE_THRESHOLD と必ず一致させる。
+  const DUPE_BONUS_THRESHOLD = 3;
 
   /* ----------------------------- 状態 ----------------------------- */
   const baseCards = Array.isArray(window.AND_CARDS) ? window.AND_CARDS : [];
@@ -77,37 +72,11 @@
     modalBody: document.getElementById("modalBody"),
     modalClose: document.getElementById("modalClose"),
     toast: document.getElementById("toast"),
-    demoControls: document.getElementById("demoControls"),
-    demoNextDay: document.getElementById("demoNextDay"),
-    demoReset: document.getElementById("demoReset"),
   };
-
-  // デモ操作は ?demo=1 の時だけ有効（本番のお客さんには見せない）
-  const DEMO_MODE = /[?&]demo=1\b/.test(location.search);
 
   /* ====================================================================
    * ユーティリティ
    * ================================================================== */
-  function loadJSON(key, fallback) {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
-    } catch (e) {
-      return fallback;
-    }
-  }
-  function loadInt(key, fallback) {
-    const n = parseInt(localStorage.getItem(key), 10);
-    return isNaN(n) ? fallback : n;
-  }
-  function save(key, val) {
-    try {
-      localStorage.setItem(key, typeof val === "string" ? val : JSON.stringify(val));
-    } catch (e) {
-      /* localStorage不可でも動作は継続 */
-    }
-  }
-
   // ローカル日付 YYYY-MM-DD（タイムゾーンずれ防止）
   function todayStr() {
     const d = new Date();
@@ -646,7 +615,7 @@
       if (data.was_new) {
         showToast("NEW! " + card.rarity + " " + card.name + " を入手！🎉");
       } else if (data.got_bonus) {
-        showToast("被り5枚達成！ボーナスガチャ +1 🎁");
+        showToast("被り" + DUPE_BONUS_THRESHOLD + "枚達成！ボーナスガチャ +1 🎁");
       } else {
         showToast(
           "被り… " +
@@ -719,7 +688,7 @@
       "</div>" +
       '<div class="gs-dupe">' +
       '<div class="gs-dupe-label">被り貯金 <b>' + dupe + " / " + DUPE_BONUS_THRESHOLD +
-      "</b>（5枚で無料ガチャ）</div>" +
+      "</b>（" + DUPE_BONUS_THRESHOLD + "枚で無料ガチャ）</div>" +
       '<div class="gs-bar"><span style="width:' + pct + '%"></span></div>' +
       "</div>";
   }
@@ -759,7 +728,7 @@
       '<h3 id="modalTitle">会員登録 / ログイン</h3>' +
       '<p class="auth-lead">メールアドレスに<strong>ログイン用リンク</strong>を送ります。<br />パスワードは不要。届いたリンクを開くだけ。</p>' +
       '<form id="authForm" novalidate>' +
-      '<input type="email" id="authEmail" class="auth-input" required placeholder="you@example.com" autocomplete="email" inputmode="email" />' +
+      '<input type="email" id="authEmail" class="auth-input" required placeholder="you@example.com" autocomplete="email" inputmode="email" aria-label="メールアドレス" />' +
       '<button type="submit" class="btn primary auth-submit">ログインリンクを送る</button>' +
       "</form>" +
       '<p class="auth-msg" id="authMsg" aria-live="polite"></p>' +

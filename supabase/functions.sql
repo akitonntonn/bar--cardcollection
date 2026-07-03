@@ -43,7 +43,7 @@ declare
   had_count    int;
   was_new      boolean;
   got_bonus    boolean := false;
-  DUPE_THRESHOLD constant int := 5;
+  DUPE_THRESHOLD constant int := 3;  -- 被り“合計”3枚で無料ガチャ1回（app.js と一致）
 begin
   if uid is null then
     raise exception 'not authenticated';
@@ -124,7 +124,7 @@ begin
     update public.profiles set bonus_pulls = bonus_pulls - 1 where id = uid;
   end if;
 
-  -- 被り救済（合計5枚でボーナス+1）
+  -- 被り救済（合計3枚でボーナス+1）
   if not was_new then
     update public.profiles set dupe_stock = dupe_stock + 1 where id = uid;
     select dupe_stock into prof.dupe_stock from public.profiles where id = uid;
@@ -233,10 +233,10 @@ $$;
 -- ---------------------------------------------------------------------------
 -- 実行権限：ログイン済みユーザーのみ。管理チェックは関数内で行う。
 -- ---------------------------------------------------------------------------
-revoke all on function public.draw_gacha()                          from public;
-revoke all on function public.grant_pulls(uuid, int, text)          from public;
-revoke all on function public.grant_card(uuid, text, text)          from public;
-revoke all on function public.record_visit(uuid, text)              from public;
+revoke all on function public.draw_gacha()                          from public, anon;
+revoke all on function public.grant_pulls(uuid, int, text)          from public, anon;
+revoke all on function public.grant_card(uuid, text, text)          from public, anon;
+revoke all on function public.record_visit(uuid, text)              from public, anon;
 
 grant execute on function public.draw_gacha()                       to authenticated;
 grant execute on function public.grant_pulls(uuid, int, text)       to authenticated;
