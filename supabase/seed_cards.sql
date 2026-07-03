@@ -1,6 +1,6 @@
 -- ⚠ 自動生成ファイル。手で編集しないでください。
 -- 再生成: node supabase/generate_seed.mjs（data/cards.js が正）
--- カードマスタ（47枚）を public.cards に upsert します。
+-- カードマスタ（53枚）を public.cards に upsert します。
 
 insert into public.cards
   (id, no, name, variant, rarity, art, image_url, obtain_condition, gacha, gacha_bucket, months, sort)
@@ -51,7 +51,13 @@ values
   ('akito-secret01', '044', 'あきと', '夏夜の影', 'SECRET', 'full', './assets/cards/akito-secret01.png', '夏限定ガチャ（7・8月）でSRと同確率で入手', true, 'SR', array[7,8]::int[], 43),
   ('kakeru-secret01', '045', 'かける', '夏夜のスピードスター', 'SECRET', 'full', './assets/cards/kakeru-secret01.png', '夏限定ガチャ（7・8月）でSRと同確率で入手', true, 'SR', array[7,8]::int[], 44),
   ('yuta-secret01', '046', 'ゆうた', '夏夜の支配者', 'SECRET', 'full', './assets/cards/yuta-secret01.png', '夏限定ガチャ（7・8月）でSRと同確率で入手', true, 'SR', array[7,8]::int[], 45),
-  ('shoma-secret01', '047', 'しょうま', '夏夜のジェントルマン', 'SECRET', 'full', './assets/cards/shoma-secret01.png', '夏限定ガチャ（7・8月）でSRと同確率で入手', true, 'SR', array[7,8]::int[], 46)
+  ('shoma-secret01', '047', 'しょうま', '夏夜のジェントルマン', 'SECRET', 'full', './assets/cards/shoma-secret01.png', '夏限定ガチャ（7・8月）でSRと同確率で入手', true, 'SR', array[7,8]::int[], 46),
+  ('akito-sn01', '048', 'あきと', '夏祭りのクール担当', 'NORMAL', 'full', './assets/cards/akito-sn01.png', '夏限定ガチャ（7・8月）で入手', false, null, array[7,8]::int[], 47),
+  ('akito-sn02', '049', 'あきと', '夏祭りのまとめ役', 'NORMAL', 'full', './assets/cards/akito-sn02.png', '夏限定ガチャ（7・8月）で入手', false, null, array[7,8]::int[], 48),
+  ('kakeru-sn01', '050', 'かける', '夏祭りの金魚マスター', 'NORMAL', 'full', './assets/cards/kakeru-sn01.png', '夏限定ガチャ（7・8月）で入手', false, null, array[7,8]::int[], 49),
+  ('kakeru-sn02', '051', 'かける', 'ムードメーカー（夏花火）', 'NORMAL', 'full', './assets/cards/kakeru-sn02.png', '夏限定ガチャ（7・8月）で入手', false, null, array[7,8]::int[], 50),
+  ('shoma-sn01', '052', 'しょうま', '夏祭りのムードメーカー', 'NORMAL', 'full', './assets/cards/shoma-sn01.png', '夏限定ガチャ（7・8月）で入手', false, null, array[7,8]::int[], 51),
+  ('shoma-sn02', '053', 'しょうま', 'サマースタイル（ビーチ）', 'NORMAL', 'full', './assets/cards/shoma-sn02.png', '夏限定ガチャ（7・8月）で入手', false, null, array[7,8]::int[], 52)
 on conflict (id) do update set
   no = excluded.no,
   name = excluded.name,

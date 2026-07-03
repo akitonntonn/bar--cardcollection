@@ -84,4 +84,13 @@ window.AND_CARDS = [
   { id: "kakeru-secret01", no: "045", name: "かける", variant: "夏夜のスピードスター", rarity: "SECRET", art: "full", imageUrl: "./assets/cards/kakeru-secret01.png", obtainCondition: "夏限定ガチャ（7・8月）でSRと同確率で入手", owned: false, gacha: true, gachaBucket: "SR", months: [7, 8] },
   { id: "yuta-secret01", no: "046", name: "ゆうた", variant: "夏夜の支配者", rarity: "SECRET", art: "full", imageUrl: "./assets/cards/yuta-secret01.png", obtainCondition: "夏限定ガチャ（7・8月）でSRと同確率で入手", owned: false, gacha: true, gachaBucket: "SR", months: [7, 8] },
   { id: "shoma-secret01", no: "047", name: "しょうま", variant: "夏夜のジェントルマン", rarity: "SECRET", art: "full", imageUrl: "./assets/cards/shoma-secret01.png", obtainCondition: "夏限定ガチャ（7・8月）でSRと同確率で入手", owned: false, gacha: true, gachaBucket: "SR", months: [7, 8] },
+
+  /* ===================== 夏限定ノーマル（7・8月だけ通常ガチャに出現） =====================
+   * レアリティはNORMAL（78%枠を夏の間だけ共有）。months:[7,8] で期間外は排出されない。 */
+  { id: "akito-sn01", no: "048", name: "あきと", variant: "夏祭りのクール担当", rarity: "NORMAL", art: "full", imageUrl: "./assets/cards/akito-sn01.png", obtainCondition: "夏限定ガチャ（7・8月）で入手", owned: false, months: [7, 8] },
+  { id: "akito-sn02", no: "049", name: "あきと", variant: "夏祭りのまとめ役", rarity: "NORMAL", art: "full", imageUrl: "./assets/cards/akito-sn02.png", obtainCondition: "夏限定ガチャ（7・8月）で入手", owned: false, months: [7, 8] },
+  { id: "kakeru-sn01", no: "050", name: "かける", variant: "夏祭りの金魚マスター", rarity: "NORMAL", art: "full", imageUrl: "./assets/cards/kakeru-sn01.png", obtainCondition: "夏限定ガチャ（7・8月）で入手", owned: false, months: [7, 8] },
+  { id: "kakeru-sn02", no: "051", name: "かける", variant: "ムードメーカー（夏花火）", rarity: "NORMAL", art: "full", imageUrl: "./assets/cards/kakeru-sn02.png", obtainCondition: "夏限定ガチャ（7・8月）で入手", owned: false, months: [7, 8] },
+  { id: "shoma-sn01", no: "052", name: "しょうま", variant: "夏祭りのムードメーカー", rarity: "NORMAL", art: "full", imageUrl: "./assets/cards/shoma-sn01.png", obtainCondition: "夏限定ガチャ（7・8月）で入手", owned: false, months: [7, 8] },
+  { id: "shoma-sn02", no: "053", name: "しょうま", variant: "サマースタイル（ビーチ）", rarity: "NORMAL", art: "full", imageUrl: "./assets/cards/shoma-sn02.png", obtainCondition: "夏限定ガチャ（7・8月）で入手", owned: false, months: [7, 8] },
 ];
