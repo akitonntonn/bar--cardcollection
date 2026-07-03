@@ -317,7 +317,7 @@
     });
 
     els.stats.innerHTML =
-      statBox("所持枚数", ownedCount + " / " + total, "枚 コンプ") +
+      statBox("所持カード", ownedCount + " / " + total, "種類") +
       statBox("コンプリート率", pct + "%", "COMPLETE") +
       statBox("最高レアリティ", top, top === "–" ? "未所持" : RARITY_LABEL_JP[top]);
   }
@@ -347,10 +347,9 @@
 
     els.filters.innerHTML = defs
       .map(function (d) {
-        const count =
-          d.key === "ALL"
-            ? baseCards.length
-            : baseCards.filter((c) => c.rarity === d.key).length;
+        const list =
+          d.key === "ALL" ? baseCards : baseCards.filter((c) => c.rarity === d.key);
+        const ownedCount = list.filter(isOwned).length;
         const pressed = activeFilter === d.key;
         return (
           '<button type="button" class="chip" data-filter="' +
@@ -359,8 +358,11 @@
           pressed +
           '">' +
           d.label +
+          // 所持/総数で収集の進み具合が一目で分かるように
           '<span class="chip__count">' +
-          count +
+          ownedCount +
+          "/" +
+          list.length +
           "</span>" +
           "</button>"
         );
@@ -630,6 +632,7 @@
       if (data.was_new) newlyUnlockedId = card.id;
 
       renderStats();
+      renderFilters();
       renderGrid();
       renderGachaStatus();
 
@@ -764,7 +767,7 @@
     els.modalBody.innerHTML =
       '<div class="auth-form">' +
       '<h3 id="modalTitle">会員登録 / ログイン</h3>' +
-      '<p class="auth-lead">メールアドレスに<strong>ログイン用リンク</strong>を送ります。<br />パスワードは不要。届いたリンクを開くだけ。</p>' +
+      '<p class="auth-lead">🎁 いま登録すると<strong>ガチャ3回分</strong>プレゼント！<br />メールに<strong>ログイン用リンク</strong>を送ります。パスワードは不要。</p>' +
       '<button type="button" class="btn btn-google" id="googleBtn">' +
       '<span class="g-mark" aria-hidden="true">G</span> Googleでログイン</button>' +
       '<div class="auth-divider"><span>または メールで</span></div>' +
@@ -997,6 +1000,7 @@
       counts[card.id] = (counts[card.id] || 0) + 1;
       if (d.was_new) newlyUnlockedId = card.id;
       renderStats();
+      renderFilters();
       renderGrid();
       renderGachaStatus();
       showToast("🎉 特別なカードをゲット！");
@@ -1082,6 +1086,7 @@
     }
     renderAuthBar();
     renderStats();
+    renderFilters(); // 所持/総数の進捗表示を最新化
     renderGrid();
     renderGachaStatus();
     if (session) {
