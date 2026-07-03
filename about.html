@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a1330" />
+    <meta
+      name="description"
+      content="BAR & 公式「&スタッフカード図鑑」の紹介ページ。毎日1回無料ガチャでスタッフカードを集めよう。来店やイベントでしか手に入らない限定カードも。"
+    />
+    <title>&スタッフカード図鑑とは | BAR &amp;</title>
+
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="./assets/icons/icon.svg" />
+    <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&family=Noto+Sans+JP:wght@500;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      /* ===== 紹介ページ（LP）専用 ===== */
+      .lp { max-width: 760px; margin: 0 auto; padding: 20px 16px 80px; }
+      .lp section { margin-bottom: 42px; }
+
+      /* ヒーロー */
+      .lp-hero {
+        text-align: center;
+        background: repeating-linear-gradient(-45deg, var(--blue) 0 26px, #3a25c4 26px 52px);
+        border: var(--bw) solid var(--ink);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-lg);
+        padding: 38px 18px 34px;
+      }
+      .lp-hero__logo {
+        width: 96px; height: 96px; border-radius: 20px;
+        border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--ink);
+        background: #fff; margin-bottom: 14px;
+      }
+      .lp-hero h1 {
+        font-weight: 900; color: #fff; font-size: clamp(1.6rem, 6vw, 2.4rem);
+        line-height: 1.25; margin: 0 0 10px; text-shadow: 3px 3px 0 var(--ink);
+      }
+      .lp-hero h1 .amp { color: var(--yellow); }
+      .lp-hero p { color: rgba(255,255,255,.92); font-weight: 700; margin: 0 0 22px; }
+      .lp-cta {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-size: 1.05rem; font-weight: 900; color: var(--ink);
+        background: var(--yellow); border: var(--bw) solid var(--ink);
+        border-radius: var(--radius); box-shadow: var(--shadow);
+        padding: 14px 26px; text-decoration: none;
+        transition: transform .06s ease, box-shadow .06s ease;
+      }
+      .lp-cta:hover { transform: translate(-2px,-2px); box-shadow: var(--shadow-lg); }
+      .lp-cta:active { transform: translate(3px,3px); box-shadow: 1px 1px 0 var(--ink); }
+      .lp-cta--ghost { background: #fff; font-size: .9rem; padding: 10px 18px; }
+      .lp-hero__badge {
+        display: inline-block; font-family: var(--font-mono); font-weight: 800;
+        font-size: .72rem; letter-spacing: .14em; color: var(--ink);
+        background: var(--lime); border: 2px solid var(--ink); border-radius: 999px;
+        padding: 5px 14px; margin-bottom: 14px; box-shadow: 2px 2px 0 var(--ink);
+      }
+
+      /* 見出し */
+      .lp h2 {
+        font-weight: 900; font-size: 1.3rem; color: #fff; margin: 0 0 6px;
+        text-shadow: 2px 2px 0 var(--ink);
+      }
+      .lp h2 .eyebrow { display: block; color: var(--cyan); margin-bottom: 4px; }
+      .lp .lead { color: rgba(255,255,255,.85); font-weight: 600; font-size: .92rem;
+        line-height: 1.9; margin: 0 0 18px; }
+
+      /* 特徴カード */
+      .feat-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+      @media (min-width: 560px) { .feat-grid { grid-template-columns: 1fr 1fr; } }
+      .feat {
+        background: rgba(255,255,255,.06); border: 3px solid var(--ink);
+        border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 14px;
+      }
+      .feat .f-icon { font-size: 1.6rem; }
+      .feat h3 { color: var(--yellow); font-weight: 900; font-size: 1rem; margin: 6px 0; }
+      .feat p { color: rgba(255,255,255,.85); font-size: .84rem; line-height: 1.8; margin: 0; }
+
+      /* 遊び方ステップ */
+      .steps { counter-reset: step; display: grid; gap: 12px; }
+      .step {
+        position: relative; padding: 16px 14px 16px 64px;
+        background: rgba(255,255,255,.06); border: 3px solid var(--ink);
+        border-radius: var(--radius); box-shadow: var(--shadow);
+      }
+      .step::before {
+        counter-increment: step; content: counter(step);
+        position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+        width: 36px; height: 36px; display: grid; place-items: center;
+        font-family: var(--font-mono); font-weight: 800; font-size: 1.1rem;
+        color: var(--ink); background: var(--pink);
+        border: 3px solid var(--ink); border-radius: 10px; box-shadow: 2px 2px 0 var(--ink);
+      }
+      .step h3 { color: #fff; font-weight: 900; font-size: .95rem; margin: 0 0 4px; }
+      .step p { color: rgba(255,255,255,.8); font-size: .82rem; line-height: 1.7; margin: 0; }
+
+      /* レアリティ表 */
+      .rarity-list { display: grid; gap: 8px; }
+      .rarity-row {
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        background: rgba(255,255,255,.06); border: 3px solid var(--ink);
+        border-radius: 12px; box-shadow: 3px 3px 0 var(--ink); padding: 10px 12px;
+      }
+      .rarity-row .r-name {
+        font-family: var(--font-mono); font-weight: 800; font-size: .8rem;
+        color: var(--ink); border: 2px solid var(--ink); border-radius: 6px;
+        padding: 3px 10px; min-width: 84px; text-align: center;
+      }
+      .r-NORMAL { background: #fff; }
+      .r-RARE { background: var(--pink); }
+      .r-SR { background: var(--cyan); }
+      .r-SSR { background: var(--yellow); }
+      .r-SECRET { background: var(--lime); }
+      .rarity-row .r-desc { color: rgba(255,255,255,.88); font-size: .8rem; font-weight: 700; flex: 1; }
+
+      /* カードショーケース */
+      .showcase { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+      .showcase img {
+        width: 100%; border-radius: 10px; border: 3px solid var(--ink);
+        box-shadow: 4px 4px 0 var(--ink); display: block;
+      }
+      .showcase .tease { position: relative; overflow: hidden; border-radius: 10px; }
+      .showcase .tease img { filter: blur(8px) brightness(.5); }
+      .showcase .tease::after {
+        content: "？？？"; position: absolute; inset: 0; display: grid; place-items: center;
+        color: var(--lime); font-weight: 900; font-size: 1.4rem; text-shadow: 2px 2px 0 var(--ink);
+      }
+      .caption { color: rgba(255,255,255,.55); font-size: .72rem; margin-top: 8px; text-align: center; }
+
+      /* 夏限定バナー */
+      .summer {
+        background: linear-gradient(120deg, var(--lime), var(--cyan));
+        border: var(--bw) solid var(--ink); border-radius: var(--radius);
+        box-shadow: var(--shadow); padding: 18px 16px; color: var(--ink);
+      }
+      .summer h2 { color: var(--ink); text-shadow: none; }
+      .summer p { font-weight: 700; font-size: .88rem; line-height: 1.8; margin: 0; }
+
+      /* インストール手順 */
+      .install { display: grid; gap: 10px; }
+      @media (min-width: 560px) { .install { grid-template-columns: 1fr 1fr; } }
+      .install .feat h3 { color: var(--cyan); }
+
+      .lp-foot { text-align: center; color: rgba(255,255,255,.6); font-size: .78rem; line-height: 2; }
+      .lp-foot .amp { color: var(--yellow); font-weight: 900; }
+    </style>
+  </head>
+  <body>
+    <div class="bg-fx" aria-hidden="true"></div>
+    <div class="scanlines" aria-hidden="true"></div>
+
+    <main class="lp">
+      <!-- ================= HERO ================= -->
+      <section class="lp-hero">
+        <img class="lp-hero__logo" src="./assets/icons/icon-192.png" alt="BAR & ロゴ" width="96" height="96" />
+        <div><span class="lp-hero__badge">BAR &amp; OFFICIAL</span></div>
+        <h1><span class="amp">&amp;</span> STAFF CARD<br />COLLECTION</h1>
+        <p>集めて、見せて、またBAR &amp;に来たくなる。<br />スタッフのトレーディングカードを集める、お客さま専用の図鑑アプリ。</p>
+        <a class="lp-cta" href="./index.html">🎴 今すぐはじめる（無料）</a>
+      </section>
+
+      <!-- ================= 特徴 ================= -->
+      <section>
+        <h2><span class="eyebrow">What's this?</span>なにができるの？</h2>
+        <p class="lead">BAR &amp; のスタッフたちが、ここでしか見られないトレーディングカードに。ぜんぶ集めたくなる、夜のコレクション体験です。</p>
+        <div class="feat-grid">
+          <div class="feat"><span class="f-icon">🎰</span><h3>毎日1回、無料ガチャ</h3><p>1日1回タダで引ける。被っても3枚たまれば無料ガチャがもう1回。通うほど図鑑が埋まる。</p></div>
+          <div class="feat"><span class="f-icon">🎁</span><h3>登録するだけでガチャ3回</h3><p>会員登録（メール or Google）した瞬間、ウェルカム特典としてボーナスガチャ3回分をプレゼント。</p></div>
+          <div class="feat"><span class="f-icon">🎂</span><h3>お店でしか出会えないカード</h3><p>誕生月にオリジナルシャンパンを注文すると、その年だけの誕生日SSRカードが手に入る。</p></div>
+          <div class="feat"><span class="f-icon">📱</span><h3>スマホでアプリみたいに</h3><p>ホーム画面に追加すれば、アプリのように起動。コレクションはアカウントに保存され、機種変しても消えない。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 遊び方 ================= -->
+      <section>
+        <h2><span class="eyebrow">How to play</span>あそびかた</h2>
+        <div class="steps">
+          <div class="step"><h3>会員登録する（30秒）</h3><p>メールアドレス or Googleアカウントでログイン。パスワードは不要です。特典ガチャ3回がすぐもらえます。</p></div>
+          <div class="step"><h3>毎日ガチャを引く</h3><p>1日1回無料。NORMALからシークレットまで、何が出るかはお楽しみ。被り3枚で無料ガチャ+1回。</p></div>
+          <div class="step"><h3>お店に行って限定カードをGET</h3><p>来店特典やイベントで、ガチャでは出ないカードやガチャ回数がもらえるQRコードを配布。誕生月はオリシャンでSSRを。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= レアリティ ================= -->
+      <section>
+        <h2><span class="eyebrow">Rarity</span>レアリティと排出率</h2>
+        <div class="rarity-list">
+          <div class="rarity-row"><span class="r-name r-NORMAL">NORMAL</span><span class="r-desc">通常（78%）— スタッフの日常・部活・お祭りシリーズ</span></div>
+          <div class="rarity-row"><span class="r-name r-RARE">RARE</span><span class="r-desc">レア（17%）— ちょっと特別な一枚</span></div>
+          <div class="rarity-row"><span class="r-name r-SR">SR</span><span class="r-desc">激レア（5%）— 出たら自慢していい</span></div>
+          <div class="rarity-row"><span class="r-name r-SSR">SSR</span><span class="r-desc">誕生日・来店記念 — ガチャでは出ない。お店でだけ</span></div>
+          <div class="rarity-row"><span class="r-name r-SECRET">SECRET</span><span class="r-desc">シークレット — 存在も内容もヒミツ。期間限定で出現することも…</span></div>
+        </div>
+      </section>
+
+      <!-- ================= カードちら見せ ================= -->
+      <section>
+        <h2><span class="eyebrow">Preview</span>カードをちら見せ</h2>
+        <div class="showcase">
+          <img src="./assets/cards/akito-sr01.jpg" alt="あきとのSRカード" loading="lazy" />
+          <img src="./assets/cards/kakeru-sr01.jpg" alt="かけるのSRカード" loading="lazy" />
+          <div class="tease"><img src="./assets/cards/yuta-secret01.jpg" alt="シークレットカード（内容はヒミツ）" loading="lazy" /></div>
+        </div>
+        <p class="caption">全53種（2026年7月現在）。シークレットの中身は、引き当てた人だけが知っている。</p>
+      </section>
+
+      <!-- ================= 夏限定 ================= -->
+      <section class="summer">
+        <h2>🌴 夏限定カード、出現中！（7・8月だけ）</h2>
+        <p>夏祭り・花火・ビーチをテーマにした夏限定カード<b>全10種</b>が、7月・8月の間だけ通常ガチャに追加中。夏のシークレットはSRと同じ確率で出現。9月になると出なくなるので、この夏のうちに引いておこう。</p>
+      </section>
+
+      <!-- ================= アプリ化 ================= -->
+      <section>
+        <h2><span class="eyebrow">Install</span>ホーム画面に追加（アプリ化）</h2>
+        <div class="install">
+          <div class="feat"><h3>iPhone（Safari）</h3><p>共有ボタン（□↑）→「ホーム画面に追加」。ロゴアイコンでアプリのように起動します。</p></div>
+          <div class="feat"><h3>Android（Chrome）</h3><p>メニュー（︙）→「ホーム画面に追加」または「インストール」をタップ。</p></div>
+        </div>
+      </section>
+
+      <!-- ================= CTA ================= -->
+      <section style="text-align:center">
+        <a class="lp-cta" href="./index.html">🎴 図鑑をひらいて、今日の1枚を引く</a>
+        <p class="caption" style="margin-top:12px">登録無料・ダウンロード不要。BAR &amp; のカウンターで待ってます。</p>
+      </section>
+
+      <footer class="lp-foot">
+        <p>BAR <span class="amp">&amp;</span> — 夜・ゲーム・スタッフ愛・コレクション。</p>
+        <p><a class="foot-link" href="./index.html">図鑑をひらく</a></p>
+      </footer>
+    </main>
+  </body>
+</html>

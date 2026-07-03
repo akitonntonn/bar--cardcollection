@@ -143,7 +143,7 @@
     let imageInner;
     if (card.imageUrl) {
       imageInner =
-        '<img src="' +
+        '<img loading="lazy" decoding="async" src="' +
         esc(card.imageUrl) +
         '" alt="' +
         esc(card.name) +
@@ -220,7 +220,7 @@
       esc(card.name) + (card.variant ? "（" + esc(card.variant) + "）" : "") + " のカード";
     return (
       '<div class="card__cover">' +
-      '<img class="card__cover-img" src="' +
+      '<img class="card__cover-img" loading="lazy" decoding="async" src="' +
       esc(card.imageUrl) +
       '" alt="' +
       alt +
@@ -231,6 +231,12 @@
       '<span class="card__badge card__badge--no">No.' +
       esc(card.no) +
       "</span>" +
+      // 期間限定カードには「◯月限定」バッジ（図鑑で見分けがつくように）
+      (Array.isArray(card.months) && card.months.length
+        ? '<span class="card__badge card__badge--season">🌴 ' +
+          card.months.join("・") +
+          "月限定</span>"
+        : "") +
       "</div>"
     );
   }
@@ -392,6 +398,12 @@
       ? '<span class="tag tag--attr">属性: ' + esc(card.attribute) + "</span>"
       : "";
 
+    // 期間限定タグ（monthsがあるカード）
+    const seasonTag =
+      Array.isArray(card.months) && card.months.length
+        ? '<span class="tag tag--season">🌴 ' + card.months.join("・") + "月限定</span>"
+        : "";
+
     // キャッチコピー（あれば）
     const catchBlock =
       card.catchCopy && revealSecret
@@ -442,6 +454,7 @@
       RARITY_LABEL_JP[card.rarity] +
       "</span>" +
       attrTag +
+      seasonTag +
       "</div>" +
       catchBlock +
       skillBlock +
@@ -705,7 +718,8 @@
       '<div class="gs-dupe-label">被り貯金 <b>' + dupe + " / " + DUPE_BONUS_THRESHOLD +
       "</b>（" + DUPE_BONUS_THRESHOLD + "枚で無料ガチャ）</div>" +
       '<div class="gs-bar"><span style="width:' + pct + '%"></span></div>' +
-      "</div>";
+      "</div>" +
+      '<button type="button" class="gs-code" id="redeemEntryBtn">🎫 お店でもらったQR・コードはこちら</button>';
   }
 
   /* ====================================================================
@@ -937,17 +951,10 @@
     } catch (e) {}
   }
 
-  // ログイン済みなら退避中のコードをサーバで引換
-  async function consumePendingRedeem() {
-    if (!sb || !session) return;
-    let code = null;
-    try {
-      code = localStorage.getItem(REDEEM_KEY);
-    } catch (e) {}
-    if (!code) return;
-    try {
-      localStorage.removeItem(REDEEM_KEY);
-    } catch (e) {}
+  // コードをサーバで引換（QR経由・手入力どちらもここに集約）
+  // 戻り値: { ok:true } | { ok:false, message:"理由" }
+  async function redeemNow(code) {
+    if (!sb || !session) return { ok: false, message: "ログインが必要です" };
 
     let res;
     try {
@@ -956,24 +963,35 @@
       res = { error: e };
     }
     if (res.error) {
-      showToast("QRコードの適用に失敗: " + (res.error.message || "通信エラー"));
-      return;
+      try {
+        console.error("redeem_code error:", res.error);
+      } catch (e2) {}
+      return { ok: false, message: "適用に失敗しました: " + (res.error.message || "通信エラー") };
     }
     const d = res.data;
     if (!d || !d.ok) {
       const reasons = {
-        not_found: "無効なコードです",
+        not_found: "無効なコードです（入力ミスがないか確認してください）",
         expired: "期限切れのコードです",
         exhausted: "使用上限に達したコードです",
-        already_used: "このコードは使用済みです",
+        already_used: "このコードはすでに使用済みです",
       };
-      showToast("🎫 " + (reasons[d && d.reason] || "コードを適用できませんでした"));
-      return;
+      return { ok: false, message: reasons[d && d.reason] || "コードを適用できませんでした" };
     }
+
     if (d.kind === "pulls") {
       serverState.bonus_pulls += d.pulls;
       renderGachaStatus();
-      showToast("🎁 ガチャ " + d.pulls + "回分をゲット！");
+      // 見逃さないよう、トーストではなくモーダルで結果を出す
+      lastFocused = document.activeElement;
+      els.modalBody.innerHTML =
+        '<div class="auth-form">' +
+        '<h3 id="modalTitle">🎁 受け取りました！</h3>' +
+        '<p class="auth-lead">ボーナスガチャ <strong>' +
+        d.pulls +
+        "回分</strong> を追加しました。<br />「ガチャを引く」ボタンからすぐ引けます！</p>" +
+        "</div>";
+      showModalShell();
     } else {
       const card = baseCards.find((c) => c.id === d.card.id) || d.card;
       counts[card.id] = (counts[card.id] || 0) + 1;
@@ -984,6 +1002,70 @@
       showToast("🎉 特別なカードをゲット！");
       openModal(card);
     }
+    return { ok: true };
+  }
+
+  // ログイン済みなら退避中のコード（?redeem= 由来）をサーバで引換
+  async function consumePendingRedeem() {
+    if (!sb || !session) return;
+    let code = null;
+    try {
+      code = localStorage.getItem(REDEEM_KEY);
+    } catch (e) {}
+    if (!code) return;
+    try {
+      localStorage.removeItem(REDEEM_KEY);
+    } catch (e) {}
+    const res = await redeemNow(code);
+    if (!res.ok) showToast("🎫 " + res.message);
+  }
+
+  // コード手入力モーダル（QRがSafari側で開いてしまった時の救済にもなる）
+  function openRedeemModal() {
+    if (!session) {
+      openAuthModal();
+      return;
+    }
+    lastFocused = document.activeElement;
+    els.modalBody.innerHTML =
+      '<div class="auth-form">' +
+      '<h3 id="modalTitle">🎫 コードで受け取る</h3>' +
+      '<p class="auth-lead">お店でもらったQRコードの下に書いてある<strong>8桁のコード</strong>を入力してください。</p>' +
+      '<form id="redeemForm" novalidate>' +
+      '<input type="text" id="redeemCode" class="auth-input" maxlength="12" placeholder="例：A1B2C3D4" ' +
+      'autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="引換コード" />' +
+      '<button type="submit" class="btn primary auth-submit">受け取る</button>' +
+      "</form>" +
+      '<p class="auth-msg" id="redeemMsg" aria-live="polite"></p>' +
+      "</div>";
+    showModalShell();
+    const input = document.getElementById("redeemCode");
+    if (input) input.focus();
+  }
+
+  async function onRedeemSubmit(e) {
+    e.preventDefault();
+    const input = document.getElementById("redeemCode");
+    const msgEl = document.getElementById("redeemMsg");
+    const code = ((input && input.value) || "").trim();
+    if (!code) {
+      if (msgEl) msgEl.textContent = "コードを入力してください。";
+      return;
+    }
+    const btn = e.target.querySelector('button[type="submit"]');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "確認中…";
+    }
+    const res = await redeemNow(code);
+    if (!res.ok) {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "受け取る";
+      }
+      if (msgEl) msgEl.textContent = res.message;
+    }
+    // 成功時は redeemNow が結果モーダルに差し替えるのでここでは何もしない
   }
 
   // 認証状態が変わった時（初回ロード / ログイン / ログアウト）
@@ -992,7 +1074,8 @@
     session = newSession || null;
     if (session) {
       await loadUserData();
-      if (!els.modal.hidden) closeModal(); // ログイン成功でログインモーダルを閉じる
+      // ログインモーダルが開いていた時だけ閉じる（ガチャ演出など他のモーダルは邪魔しない）
+      if (!els.modal.hidden && els.modalBody.querySelector("#authForm")) closeModal();
     } else {
       counts = {};
       serverState = { bonus_pulls: 0, dupe_stock: 0, daily_available: false, display_name: "", is_admin: false };
@@ -1110,7 +1193,15 @@
     els.modalBody.addEventListener("submit", function (e) {
       if (e.target && e.target.id === "authForm") onAuthSubmit(e);
       if (e.target && e.target.id === "profileForm") onProfileSubmit(e);
+      if (e.target && e.target.id === "redeemForm") onRedeemSubmit(e);
     });
+
+    // ガチャ状態パネル内（コード引換の入口）
+    if (els.gachaStatus) {
+      els.gachaStatus.addEventListener("click", function (e) {
+        if (e.target.closest("#redeemEntryBtn")) openRedeemModal();
+      });
+    }
 
     // モーダル内のボタン（Googleログイン / シェア）
     els.modalBody.addEventListener("click", function (e) {
@@ -1167,8 +1258,18 @@
     // 認証状態を購読（初回セッション/ログイン/ログアウトで onAuth を呼ぶ）
     // ※ コールバック内で他のSupabase呼び出しをawaitするとデッドロックし得るため、
     //   setTimeout(0) で外に逃がしてから onAuth を実行する。
+    // ※ TOKEN_REFRESHED 等「ユーザーが変わらない」イベントでは再描画しない。
+    //   （ガチャ通信中にトークン更新が走ると、演出モーダルが閉じて
+    //    ログアウトしたように見えるバグの原因だった）
     if (sb) {
+      let lastUid; // undefined = 初回未確定
       sb.auth.onAuthStateChange(function (_event, s) {
+        const uid = s && s.user ? s.user.id : null;
+        if (lastUid !== undefined && uid === lastUid) {
+          if (s) session = s; // 新しいトークンだけ差し替え
+          return;
+        }
+        lastUid = uid;
         window.setTimeout(function () {
           onAuth(s);
         }, 0);

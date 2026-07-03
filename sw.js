@@ -7,7 +7,7 @@
  *   - その他は network-first（成功したらキャッシュ更新、失敗時キャッシュ）
  *   - バージョンを上げると古いキャッシュは自動削除
  * ========================================================================= */
-const VERSION = "and-card-v1";
+const VERSION = "and-card-v2";
 const CORE = [
   "./",
   "./index.html",
@@ -41,6 +41,24 @@ self.addEventListener("fetch", (e) => {
   // 同一オリジンのGET以外（Supabase・Googleフォント等）は触らない
   if (req.method !== "GET" || url.origin !== self.location.origin) return;
 
+  // カード画像・アイコンは不変ファイル → cache-first
+  // （初回だけダウンロードし、2回目以降は即表示＝体感が大幅に軽くなる）
+  if (url.pathname.includes("/assets/")) {
+    e.respondWith(
+      caches.match(req).then(
+        (hit) =>
+          hit ||
+          fetch(req).then((res) => {
+            const copy = res.clone();
+            caches.open(VERSION).then((c) => c.put(req, copy));
+            return res;
+          })
+      )
+    );
+    return;
+  }
+
+  // HTML/JS/CSS は network-first（常に最新。オフライン時のみキャッシュ）
   e.respondWith(
     fetch(req)
       .then((res) => {

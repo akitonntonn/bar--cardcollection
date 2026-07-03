@@ -639,6 +639,15 @@ body {
 .card--SR .card__badge--rarity { color: var(--cyan); }
 .card--SSR .card__badge--rarity { color: var(--yellow); }
 .card--SECRET .card__badge--rarity { color: var(--lime); }
+/* 期間限定（夏カード等）バッジ：左下に目立つライム */
+.card__badge--season {
+  top: auto;
+  bottom: 6px;
+  left: 6px;
+  color: var(--ink);
+  background: var(--lime);
+  border-color: var(--ink);
+}
 /* 未所持のフルアートは暗転（LOCKEDオーバーレイは上に残す） */
 .card.is-locked .card__cover { filter: grayscale(0.9) brightness(0.42); }
 /* 未所持SECRETのフルアートは強めに隠して「秘密」を保つ */
@@ -1020,6 +1029,35 @@ body {
 .tag--no { background: var(--paper); }
 .tag--rarity { background: var(--yellow); }
 .tag--attr { background: var(--cyan); }
+.tag--season { background: var(--lime); }
+
+/* ガチャ状態パネル：コード引換の入口 */
+.gacha-status .gs-code {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.74rem;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px dashed var(--ink);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.gacha-status .gs-code:hover {
+  background: var(--lime);
+}
+
+/* フッター内リンク（紹介ページへ） */
+.foot-link {
+  color: var(--cyan);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 
 .modal__block { margin-bottom: 14px; }
 .modal__block .modal__label {
