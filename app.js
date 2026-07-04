@@ -58,6 +58,10 @@
   let authReady = !sb; // 初回セッション確認が済んだか（ちらつき防止。sb無しなら即確定）
   const REDEEM_KEY = "and-card:pendingRedeem"; // QRコード（?redeem=）の一時保管
 
+  // コンプ報酬（upgrade_v4）。comps=セット定義（全員閲覧可）/ compClaims=自分の受取記録
+  let comps = [];
+  let compClaims = {};
+
   let activeFilter = "ALL";
   let newlyUnlockedId = null; // ガチャ直後に NEW! を付けるID
   let lastFocused = null; // モーダルを開く前のフォーカス要素
@@ -66,6 +70,7 @@
   const els = {
     authBar: document.getElementById("authBar"),
     stats: document.getElementById("stats"),
+    comps: document.getElementById("comps"),
     filters: document.getElementById("filters"),
     grid: document.getElementById("grid"),
     gachaBtn: document.getElementById("gachaBtn"),
@@ -340,6 +345,128 @@
       "</div>" +
       "</div>"
     );
+  }
+
+  /* ====================================================================
+   * コンプ報酬（セット達成でボーナスガチャ / 判定の本丸はサーバ claim_comp）
+   * ================================================================== */
+  // セットに必要なカード一覧（サーバの comp_required_ids と同じルール）
+  function compRequiredCards(cp) {
+    if (cp.rule_type === "limited") {
+      return baseCards.filter((c) => Array.isArray(c.months) && c.months.length);
+    }
+    if (cp.rule_type === "rarity") {
+      return baseCards.filter(
+        (c) => c.rarity === cp.rarity && !(Array.isArray(c.months) && c.months.length)
+      );
+    }
+    if (cp.rule_type === "ids") {
+      const ids = cp.card_ids || [];
+      return baseCards.filter((c) => ids.indexOf(c.id) !== -1);
+    }
+    return [];
+  }
+
+  // セット定義を取得（未適用＝テーブルが無い間は静かに非表示のまま）
+  async function loadComps() {
+    if (!sb) return;
+    try {
+      const res = await sb
+        .from("comp_rewards")
+        .select("id,title,description,rule_type,rarity,card_ids,reward_pulls")
+        .eq("active", true)
+        .order("sort");
+      comps = res.error ? [] : res.data || [];
+    } catch (e) {
+      comps = [];
+    }
+    renderComps();
+  }
+
+  function renderComps() {
+    if (!els.comps) return;
+    if (!comps.length) {
+      els.comps.hidden = true;
+      els.comps.innerHTML = "";
+      return;
+    }
+    els.comps.hidden = false;
+    els.comps.innerHTML =
+      '<div class="section-head"><h2>コンプ報酬</h2><span class="eyebrow">Complete Bonus</span></div>' +
+      comps
+        .map(function (cp) {
+          const req = compRequiredCards(cp);
+          const got = req.filter(isOwned).length;
+          const total = req.length;
+          const pct = total ? Math.round((got / total) * 100) : 0;
+          const claimed = !!compClaims[cp.id];
+          const complete = total > 0 && got >= total;
+
+          let action;
+          if (claimed) {
+            action = '<span class="comp__done">✓ 受取済み</span>';
+          } else if (complete) {
+            action =
+              '<button type="button" class="btn comp__claim" data-comp="' +
+              esc(cp.id) +
+              '">🎁 受け取る</button>';
+          } else {
+            action = '<span class="comp__left">あと' + (total - got) + "枚</span>";
+          }
+
+          return (
+            '<div class="comp' + (claimed ? " is-claimed" : "") + '">' +
+            '<div class="comp__top"><span class="comp__title">' +
+            esc(cp.title) +
+            '</span><span class="comp__reward">🎁 ガチャ+' +
+            cp.reward_pulls +
+            "回</span></div>" +
+            (cp.description ? '<p class="comp__desc">' + esc(cp.description) + "</p>" : "") +
+            '<div class="comp__bar"><span style="width:' + pct + '%"></span></div>' +
+            '<div class="comp__foot"><span class="comp__count">' +
+            got + " / " + total +
+            "</span>" +
+            action +
+            "</div></div>"
+          );
+        })
+        .join("");
+  }
+
+  async function onClaimComp(compId) {
+    if (!sb) return;
+    if (!session) {
+      openAuthModal(); // 受け取りはログイン必須
+      return;
+    }
+    let res;
+    try {
+      res = await sb.rpc("claim_comp", { p_comp_id: compId });
+    } catch (e) {
+      res = { error: e };
+    }
+    if (res.error) {
+      showToast("エラー: " + (res.error.message || "通信に失敗しました"));
+      return;
+    }
+    const d = res.data;
+    if (!d || !d.ok) {
+      if (d && d.reason === "already_claimed") {
+        compClaims[compId] = true;
+        renderComps();
+        showToast("✓ このコンプ報酬は受取済みです");
+      } else if (d && d.reason === "incomplete") {
+        showToast("まだコンプしていません（あと" + (d.missing != null ? d.missing : "?") + "枚）");
+      } else {
+        showToast("受け取れませんでした");
+      }
+      return;
+    }
+    compClaims[compId] = true;
+    serverState.bonus_pulls = d.bonus_pulls;
+    renderComps();
+    renderGachaStatus();
+    showToast("🎉 コンプ達成！ボーナスガチャ +" + d.reward_pulls + "回");
   }
 
   /* ====================================================================
@@ -652,6 +779,7 @@
       renderFilters();
       renderGrid();
       renderGachaStatus();
+      renderComps(); // コンプ進捗も更新（達成したら受け取りボタンが出る）
 
       if (data.was_new) {
         showToast("NEW! " + card.rarity + " " + card.name + " を入手！🎉");
@@ -1021,6 +1149,7 @@
       renderFilters();
       renderGrid();
       renderGachaStatus();
+      renderComps();
       showToast("🎉 特別なカードをゲット！");
       openModal(card);
       applyRareGlow(card);
@@ -1101,6 +1230,7 @@
       if (!els.modal.hidden && els.modalBody.querySelector("#authForm")) closeModal();
     } else {
       counts = {};
+      compClaims = {};
       serverState = { bonus_pulls: 0, dupe_stock: 0, daily_available: false, display_name: "", is_admin: false };
     }
     renderAuthBar();
@@ -1108,6 +1238,7 @@
     renderFilters(); // 所持/総数の進捗表示を最新化
     renderGrid();
     renderGachaStatus();
+    renderComps();
     if (session) {
       await consumePendingRedeem(); // QRコードで来た場合はここで引換
 
@@ -1149,6 +1280,16 @@
       (uc.data || []).forEach((row) => {
         counts[row.card_id] = row.count;
       });
+      // コンプ報酬の受取記録（v4未適用ならエラー→空のまま）
+      try {
+        const cc = await sb.from("comp_claims").select("comp_id").eq("user_id", uid);
+        compClaims = {};
+        (cc.data || []).forEach((row) => {
+          compClaims[row.comp_id] = true;
+        });
+      } catch (e) {
+        compClaims = {};
+      }
       const today = todayStr();
       serverState = {
         bonus_pulls: (prof && prof.bonus_pulls) || 0,
@@ -1199,6 +1340,14 @@
 
     // ガチャ
     els.gachaBtn.addEventListener("click", drawGacha);
+
+    // コンプ報酬の受け取り（イベント委譲）
+    if (els.comps) {
+      els.comps.addEventListener("click", function (e) {
+        const btn = e.target.closest("[data-comp]");
+        if (btn) onClaimComp(btn.getAttribute("data-comp"));
+      });
+    }
 
     // 認証バー（ログイン / ログアウト / 表示名変更）
     if (els.authBar) {
@@ -1253,6 +1402,7 @@
       return;
     }
     checkRedeemParam(); // QRコード（?redeem=CODE）を退避
+    loadComps(); // コンプ報酬の定義を取得（非同期・取れたら表示）
     renderAuthBar();
     renderStats();
     renderFilters();
