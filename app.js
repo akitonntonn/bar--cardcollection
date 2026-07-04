@@ -267,11 +267,16 @@
   /* ====================================================================
    * グリッド描画
    * ================================================================== */
+  // フィルターキー → カード一覧（"LIMITED"=期間限定カードだけ）
+  function cardsForFilter(key) {
+    if (key === "ALL") return baseCards;
+    if (key === "LIMITED")
+      return baseCards.filter((c) => Array.isArray(c.months) && c.months.length);
+    return baseCards.filter((c) => c.rarity === key);
+  }
+
   function renderGrid() {
-    const list =
-      activeFilter === "ALL"
-        ? baseCards
-        : baseCards.filter((c) => c.rarity === activeFilter);
+    const list = cardsForFilter(activeFilter);
 
     if (!list.length) {
       els.grid.innerHTML =
@@ -344,11 +349,14 @@
     const defs = [{ key: "ALL", label: "ALL" }].concat(
       RARITIES.map((r) => ({ key: r, label: r }))
     );
+    // 期間限定カードがある間は「🌴限定」フィルターを出す
+    if (baseCards.some((c) => Array.isArray(c.months) && c.months.length)) {
+      defs.push({ key: "LIMITED", label: "🌴限定" });
+    }
 
     els.filters.innerHTML = defs
       .map(function (d) {
-        const list =
-          d.key === "ALL" ? baseCards : baseCards.filter((c) => c.rarity === d.key);
+        const list = cardsForFilter(d.key);
         const ownedCount = list.filter(isOwned).length;
         const pressed = activeFilter === d.key;
         return (
@@ -497,9 +505,18 @@
     showModalShell();
   }
 
+  // SR以上を引いた時はモーダルを光らせる（当たり感の演出）
+  function applyRareGlow(card) {
+    els.modal.classList.remove("reveal-rare");
+    if (card && ["SR", "SSR", "SECRET"].indexOf(card.rarity) !== -1) {
+      els.modal.classList.add("reveal-rare");
+    }
+  }
+
   function closeModal() {
     els.modal.hidden = true;
     els.modal.classList.remove("is-drawing");
+    els.modal.classList.remove("reveal-rare");
     document.body.style.overflow = "";
     document.removeEventListener("keydown", onModalKeydown);
     if (lastFocused && typeof lastFocused.focus === "function") {
@@ -654,6 +671,7 @@
 
       // 開いているモーダルの中身を結果カードへ差し替え（フォーカスは維持）
       els.modalBody.innerHTML = modalMarkup(card, {});
+      applyRareGlow(card);
       els.modalClose.focus();
     };
 
@@ -1005,6 +1023,7 @@
       renderGachaStatus();
       showToast("🎉 特別なカードをゲット！");
       openModal(card);
+      applyRareGlow(card);
     }
     return { ok: true };
   }

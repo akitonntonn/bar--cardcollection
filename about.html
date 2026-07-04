@@ -10,6 +10,15 @@
     />
     <title>&スタッフカード図鑑とは | BAR &amp;</title>
 
+    <!-- OGP（LINE/Instagram/X でURLを共有した時の見え方） -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="BAR &amp;" />
+    <meta property="og:title" content="&スタッフカード図鑑とは | BAR &amp;" />
+    <meta property="og:description" content="毎日1回無料ガチャでBAR &のスタッフカードを集めよう。登録でガチャ3回プレゼント。来店限定カードも。" />
+    <meta property="og:url" content="https://bar--cardcollection.pages.dev/about.html" />
+    <meta property="og:image" content="https://bar--cardcollection.pages.dev/assets/icons/icon-512.png" />
+    <meta name="twitter:card" content="summary" />
+
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="./assets/icons/icon.svg" />
     <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png" />
@@ -238,5 +247,16 @@
         <p><a class="foot-link" href="./index.html">図鑑をひらく</a></p>
       </footer>
     </main>
+
+    <script>
+      // 夏限定バナーは7・8月だけ表示（期間外は自動で非表示＝文言が古くならない）
+      (function () {
+        var m = new Date().getMonth() + 1;
+        if (m !== 7 && m !== 8) {
+          var el = document.querySelector(".summer");
+          if (el) el.style.display = "none";
+        }
+      })();
+    </script>
   </body>
 </html>

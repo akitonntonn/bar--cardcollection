@@ -425,6 +425,7 @@ body {
 .chip[data-filter="SR"][aria-pressed="true"] { color: var(--cyan); }
 .chip[data-filter="SSR"][aria-pressed="true"] { color: var(--yellow); }
 .chip[data-filter="SECRET"][aria-pressed="true"] { color: var(--lime); }
+.chip[data-filter="LIMITED"][aria-pressed="true"] { color: var(--lime); }
 
 /* =========================================================================
  * COLLECTION GRID
@@ -1120,6 +1121,18 @@ body {
 
 /* ガチャ抽選中の演出 */
 .modal.is-drawing .modal__cardwrap { animation: shake 0.5s ease-in-out infinite; }
+
+/* SR以上を引いた時：パネルがライムに脈打つ（当たり演出） */
+.modal.reveal-rare .modal__panel {
+  animation: rareGlow 1.1s ease-in-out infinite alternate;
+}
+@keyframes rareGlow {
+  from { box-shadow: 0 0 0 0 rgba(57, 255, 20, 0); }
+  to { box-shadow: 0 0 36px 8px rgba(57, 255, 20, 0.55); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal.reveal-rare .modal__panel { animation: none; box-shadow: 0 0 24px 4px rgba(57, 255, 20, 0.4); }
+}
 .drawing-badge {
   position: absolute;
   top: 12px;
@@ -1174,6 +1187,11 @@ body {
   font-size: 0.78rem;
   color: #fff;
   opacity: 0.92;
+  /* 長いメールアドレスでも1行に収める（スマホ対策） */
+  max-width: 46vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .authbar__btn {
   font-family: var(--font-sans);
