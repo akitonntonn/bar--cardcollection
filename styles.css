@@ -916,22 +916,33 @@ body {
   color: rgba(255, 255, 255, 0.82);
 }
 
-/* NEW リボン（ガチャ入手直後） */
+/* NEW リボン（ガチャ入手直後）
+ * 幅はカード幅に対する相対値（min(50%, 92px)）にして、
+ * 2カラム表示の狭いカードでも巨大な赤三角に化けないようにする。
+ * ※ .card--SR::before が inset:0（top/right/bottom/left全て0）を使っており、
+ *   同じ要素の::beforeはマージされるため、bottom/rightを明示的に auto に
+ *   戻さないと SR カードだけリボンがカード全体に引き伸ばされてしまう。
+ *   （height も明示して今後どの rarity の::beforeが増えても安全にする） */
 .card.is-new::before {
   content: "NEW!";
   position: absolute;
   z-index: 6;
-  top: 10px;
-  left: -30px;
-  width: 120px;
+  top: 12px;
+  right: auto;
+  bottom: auto;
+  left: -35%;
+  width: min(50%, 92px);
+  height: auto;
   text-align: center;
+  white-space: nowrap;
   transform: rotate(-45deg);
+  transform-origin: center;
   background: var(--red);
   color: #fff;
   font-family: var(--font-mono);
   font-weight: 800;
-  font-size: 0.62rem;
-  letter-spacing: 0.1em;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
   border-top: 2px solid var(--ink);
   border-bottom: 2px solid var(--ink);
   padding: 2px 0;
